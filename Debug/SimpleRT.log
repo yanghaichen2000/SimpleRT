@@ -1,0 +1,5 @@
+﻿  main.cpp
+d:\cg\simplert\simplert\src\obj_loader.h(648): warning C4018: “<”: 有符号/无符号不匹配
+d:\cg\simplert\simplert\src\obj_loader.h(685): warning C4018: “<”: 有符号/无符号不匹配
+d:\cg\simplert\simplert\src\obj_loader.h(691): warning C4018: “<”: 有符号/无符号不匹配
+  SimpleRT.vcxproj -> D:\cg\SimpleRT\SimpleRT\Debug\SimpleRT.exe
