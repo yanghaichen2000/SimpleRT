@@ -3,6 +3,7 @@
 #define MATERIAL_H
 
 #include "global.h"
+#include "texture.h"
 
 struct hit_record;
 
@@ -13,7 +14,8 @@ public:
 	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const = 0;
 	
 	// 计算brdf项
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal) const = 0;
+	// 传入的normal是几何法线，而不是经过normal map变换后的法线
+	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const = 0;
 	
 	// 获取材质自发光强度
 	virtual vec3 get_radiance() const = 0;
@@ -24,12 +26,21 @@ public:
 class phong_material : public material {
 public:
 	vec3 radiance; // 自发光强度
-	vec3 albedo; // 反射率
+	shared_ptr<texture> color_map_ptr;
+	vec3 ks = vec3(0.01, 0.01, 0.01); // 镜面反射系数 TODO：暂时固定
+	float a = 50; // 高光参数，越大表示越光滑 TODO：暂时固定
 
 public:
-	phong_material(vec3 albedo_init = vec3(1.0, 1.0, 1.0), vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
+	// 使用一个颜色来构造材质，自动生成类型为simple_color_texture的纹理
+	phong_material(vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
 		radiance = radiance_init;
-		albedo = albedo_init;
+		color_map_ptr = make_shared<simple_color_texture>(albedo_init);
+	}
+
+	// 使用color_map来构造材质
+	phong_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
+		radiance = radiance_init;
+		color_map_ptr = color_map_ptr_init;
 	}
 
 	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
@@ -59,9 +70,11 @@ public:
 		return pdf;
 	}
 
-	// diffuse材质的brdf为常数
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
-		return albedo * pi_inv;
+	// phong brdf
+	// zhuanlan.zhihu.com/p/500811555
+	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
+		auto ret1 = color_map_ptr->get_value(uv) * pi_inv;
+		return ret1;
 	}
 
 	virtual vec3 get_radiance() const override {
@@ -172,7 +185,7 @@ public:
 	}
 
 	// 必须输入单位向量!!!!!!!!
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
+	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
 		// F 菲涅尔项
 		vec3 h = unit_vector(wi + wo);
 		vec3 F = F0 + (vec3(1.0, 1.0, 1.0) - F0) * pow(1 - dot(wo, h), 5);

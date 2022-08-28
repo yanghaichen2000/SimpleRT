@@ -14,7 +14,6 @@ struct hit_record {
 	double t;
 	bool front_face;
 	vec3 uv;
-	int texture_id;
 
 	// 自动设置法线，使得它和光线位于同一个半球
 	inline void set_face_normal(const ray& r, const vec3& outward_normal) {

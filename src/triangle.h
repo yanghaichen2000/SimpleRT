@@ -12,36 +12,56 @@ using std::array;
 
 class triangle : public hittable {
 public:
-	int texture_id;
 	vec3 vertex[3]; // 顶点坐标
 	vec3 uv[3]; // 纹理空间坐标，使用xy项作为uv
 	shared_ptr<material> mat_ptr; // material
-	vec3 normal; // 三角形自身的法线
+	vec3 vertex_normal[3]; // 顶点法线
 
 public:
-	// 使用三个顶点和一个material初始化
-	// 同时也可以传入三个顶点的uv
-	triangle(const vec3 &vertex_1, const vec3 &vertex_2, const vec3 &vertex_3, const shared_ptr<material> &mat_ptr_all, 
-		const vec3 &uv_1 = vec3(), const vec3 &uv_2 = vec3(), const vec3 &uv_3 = vec3(), int texture_id_init = -1) {
+	// 使用三个顶点的位置和法线以及一个material初始化
+	triangle(const vec3 &vertex_1, const vec3 &vertex_2, const vec3 &vertex_3, 
+		const shared_ptr<material> &mat_ptr_all, 
+		const vec3 &uv_1, const vec3 &uv_2, const vec3 &uv_3, 
+		const vec3 &vertex_normal_1, const vec3 &vertex_normal_2, const vec3 &vertex_normal_3) {
 		
 		// 设置基本参数
+		vertex[0] = vertex_1;
+		vertex[1] = vertex_2;
+		vertex[2] = vertex_3;
+
+		mat_ptr = mat_ptr_all;
+
+		uv[0] = uv_1;
+		uv[1] = uv_2;
+		uv[2] = uv_3;
 		
+		// 直接记录传入的顶点法线
+		vertex_normal[0] = vertex_normal_1;
+		vertex_normal[1] = vertex_normal_2;
+		vertex_normal[2] = vertex_normal_3;
+	}
+
+	// 使用三个顶点的位置（无法线）以及一个material初始化
+	triangle(const vec3 &vertex_1, const vec3 &vertex_2, const vec3 &vertex_3,
+		const shared_ptr<material> &mat_ptr_all) {
+
+		// 设置基本参数
 		vertex[0] = vertex_1;
 		vertex[1] = vertex_2;
 		vertex[2] = vertex_3;
 		mat_ptr = mat_ptr_all;
-		uv[0] = uv_1;
-		uv[1] = uv_2;
-		uv[2] = uv_3;
-		texture_id = texture_id_init;
 
-		// 计算辅助参数
-		
-		// 法线，右手系
-		normal = unit_vector(cross(vertex[1] - vertex[0], vertex[2] - vertex[0]));
+		// 不支持uv
+		uv[0] = vec3(0, 0, 0);
+		uv[1] = vec3(0, 0, 0);
+		uv[2] = vec3(0, 0, 0);
+
+		// 根据顶点位置计算法线（右手系）
+		vertex_normal[0] = unit_vector(cross(vertex[1] - vertex[0], vertex[2] - vertex[0]));
+		vertex_normal[1] = vertex_normal[0];
+		vertex_normal[2] = vertex_normal[0];
 	}
 
-	// 这个函数没有标const是因为与map[]操作冲突，实际上该函数并不会改变成员变量
 	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override {
 		// 计算t以及重心坐标，同时判断光线与三角形是否相交
 		// 顶点0,1,2的权重分别为(1-b1-b2),b1,b2
@@ -71,15 +91,13 @@ public:
 		// 计算uv
 		rec.uv = w0 * uv[0] + w1 * uv[1] + w2 * uv[2];
 
-		// 计算法线
+		// 计算法线，
+		// 这里使用平滑着色，根据顶点法线插值得到shading point法线
+		vec3 normal = w0 * vertex_normal[0] + w1 * vertex_normal[1] + w2 * vertex_normal[2];
 		rec.set_face_normal(r, normal);
 
 		// 计算texture中的material参数并修改
 		rec.mat_ptr = mat_ptr;
-
-		// 返回自己的指针
-		rec.texture_id = texture_id;
-
 		return true;
 	}
 

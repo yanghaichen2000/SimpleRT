@@ -46,7 +46,6 @@ public:
 		rec.set_face_normal(r, outward_normal);
 
 		rec.uv = vec3(0, 0, 0); // 暂时未启用
-		rec.texture_id = 0; // 暂时未启用
 
 		return true;
 	}

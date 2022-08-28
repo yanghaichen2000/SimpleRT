@@ -4,8 +4,10 @@
 #include "bvh_node.h"
 
 
+
 #define PPM_FILE_NAME "out/out.ppm"
 #define OBJ_FILE_NAME "obj/test.obj"
+#define COLOR_MAP_FILE_NAME "obj/spot_texture.png"
 
 using std::vector;
 using std::fstream;
@@ -13,16 +15,16 @@ using std::thread;
 using std::cout;
 
 // 特性列表
-// 1. texture包含在material中	
+// 1. color map					完成
 // 2. normal map				
 // 3. bump map					
-// 4. 图像纹理					
+// 4. hdri
 // 5. meshtriangle类				完成
-// 6. obj加载
+// 6. 基础obj加载				完成
 // 7. 景深
 // 8. bloom
 
-# define do_render
+#define do_render
 
 int main()
 {
@@ -49,13 +51,13 @@ int main()
 	// 设置object
 	hittable_list world;
 
-	// material
+	// 简单material
 	shared_ptr<material> light_low = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(3, 3, 3));
 	shared_ptr<material> light_super = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(10, 10, 10));
 	shared_ptr<material> light_false = make_shared<phong_material>(vec3(0, 0, 0), vec3(1, 1, 1));
-	shared_ptr<material> red = make_shared<phong_material>(vec3(0.6, 0, 0), vec3(0, 0, 0));
+	shared_ptr<material> red = make_shared<phong_material>(vec3(0.6, 0.01, 0.01), vec3(0, 0, 0));
 	shared_ptr<material> blue = make_shared<phong_material>(vec3(0, 0, 1.0), vec3(0, 0, 0));
-	shared_ptr<material> green = make_shared<phong_material>(vec3(0, 0.6, 0), vec3(0, 0, 0));
+	shared_ptr<material> green = make_shared<phong_material>(vec3(0.01, 0.6, 0.01), vec3(0, 0, 0));
 	shared_ptr<material> phong_2 = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(0, 0, 0));
 	shared_ptr<material> white = make_shared<phong_material>(vec3(1, 1, 1), vec3(0, 0, 0));
 	shared_ptr<material> gold = make_shared<ggx_material>(0.2);
@@ -117,14 +119,18 @@ int main()
 	world.add(make_shared<triangle>(tri14));
 
 	// obj
-	shared_ptr<mesh_triangle> mesh1 = make_shared<simple_obj_mesh>(OBJ_FILE_NAME, white);
+	shared_ptr<texture> cow_color_map = make_shared<color_map>(COLOR_MAP_FILE_NAME);
+	shared_ptr<material> cow_phong_color_material = make_shared<phong_material>(cow_color_map);
+	shared_ptr<mesh_triangle> mesh1 = make_shared<simple_obj_mesh>(OBJ_FILE_NAME, cow_phong_color_material);
 	world.add(mesh1);
 
 	// 长方体
+	/*
 	shared_ptr<mesh_triangle> c1 = make_shared<cuboid>(1, 1, 1, white);
 	c1->set_translate(vec3(-0.7, -1.5, -5));
 	c1->set_rotate(vec3(0, pi / 6, 0));
-	//world.add(c1);
+	world.add(c1);
+	*/
 
 	// 获取world的bvh根节点
 	std::cout << "generating bvh...\n";

@@ -85,7 +85,7 @@ public:
 
 
 // 从.obj文件中读取
-// 只考虑顶点的位置，不使用其他信息
+// 读取顶点位置、uv和法线
 // 顶点坐标根据自定blender坐标进行变换
 class simple_obj_mesh : public mesh_triangle
 {
@@ -140,19 +140,29 @@ public:
 		for (objl::Mesh mesh : mesh_list) {
 			num_triangle += mesh.Indices.size() / 3;
 		}
-		// 预先设定triangle_ptr_list长度，加速
+		// 预先设定triangle_ptr_list长度
 		triangle_ptr_list.resize(num_triangle);
 
 		// 对每个mesh分别进行读取
 		int triangle_ptr_index = 0;
 		for (objl::Mesh mesh : mesh_list) {
 			
-			// 先将顶点位置列表转换为vec3格式，存放在position_list中
+			// 首先记录顶点信息
+			// 将顶点位置转换为vec3格式，存放在position_list中
 			vector<vec3> position_list;
+			// 将顶点uv坐标转换为vec3格式，存放在uv_list中
+			vector<vec3> uv_list;
+			// 将顶点法线转换为vec3格式，存放在normal_list中
+			vector<vec3> normal_list;
+
+			// 预先设定position_list，uv_list和normal_list的长度
 			int vertex_num = mesh.Vertices.size();
 			position_list.resize(vertex_num);
+			uv_list.resize(vertex_num);
+			normal_list.resize(vertex_num);
+
 			for (int index = 0; index < vertex_num; index++) {
-				// 根据自定的blender对应坐标系进行坐标变换
+				// 记录顶点位置时，根据自定的blender对应坐标系进行坐标变换
 				// blender中的y对应这里的x
 				// blender中的z对应这里的y
 				// blender中的x对应这里的z
@@ -161,9 +171,17 @@ public:
 				position_list[index] = vec3(-mesh.Vertices[index].Position.Z, mesh.Vertices[index].Position.Y, mesh.Vertices[index].Position.X); // 实际正确
 				// 应用mesh_triangle自带的变换
 				position_list[index].scale(scale_vec).rotate(rotate_vec).translate(translate_vec);
+
+				// 对normal使用相同的hack
+				normal_list[index] = vec3(-mesh.Vertices[index].Normal.Z, mesh.Vertices[index].Normal.Y, mesh.Vertices[index].Normal.X);
+				// 应用mesh_triangle自带的变换（不使用translate，且scale变换是顶点位置scale变换的逆）
+				normal_list[index].scale(vec3(1 / scale_vec[0], 1 / scale_vec[1], 1 / scale_vec[2])).rotate(rotate_vec);
+
+				// 记录uv
+				uv_list[index] = vec3(mesh.Vertices[index].TextureCoordinate.X, mesh.Vertices[index].TextureCoordinate.Y, 0);
 			}
 
-			// 根据position_list以及mesh中给出的索引，生成三角形，并放入triangle_ptr_list
+			// 生成三角形，并放入triangle_ptr_list
 			int index_num = mesh.Indices.size();
 			// 每三个index一组对应一个三角形
 			for (int index = 0; index < index_num; index += 3) {
@@ -171,7 +189,13 @@ public:
 					position_list[mesh.Indices[index]], 
 					position_list[mesh.Indices[index + 1]], 
 					position_list[mesh.Indices[index + 2]],
-					mat_ptr);
+					mat_ptr,
+					uv_list[index],
+					uv_list[index + 1], 
+					uv_list[index + 2],
+					normal_list[index],
+					normal_list[index + 1], 
+					normal_list[index + 2]);
 				triangle_ptr_index++;
 			}
 		}

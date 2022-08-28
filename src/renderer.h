@@ -39,7 +39,7 @@ color ray_color(const ray& r, const hittable& world, int depth) {
 			vec3 wo = unit_vector(-r.direction());
 			vec3 wi;
 			double pdf = rec.mat_ptr->sample_wi(wi, wo, normal);
-			vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal);
+			vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal, rec.uv);
 			vec3 radiance = rec.mat_ptr->get_radiance();
 			ray new_ray(rec.p + wi * 0.0001, wi);
 			vec3 radiance_out = radiance + ray_color(new_ray, world, depth - 1) * brdf * dot(normal, wi) / pdf / P_RR;
@@ -98,7 +98,7 @@ color ray_color(const ray& r, const hittable& world, int depth, vector<shared_pt
 			else
 			{
 				double distance_light_square = (position_light - position_hit).length_squared(); // shading point到光源采样点距离的平方
-				vec3 brdf_light = rec.mat_ptr->brdf(wi_light, wo, normal);
+				vec3 brdf_light = rec.mat_ptr->brdf(wi_light, wo, normal, rec.uv);
 				vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normal, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light); // 直接光
 				radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
 			}
@@ -111,7 +111,7 @@ color ray_color(const ray& r, const hittable& world, int depth, vector<shared_pt
 			// 随机采样入射光方向获取间接光照
 			vec3 wi; // 入射方向（随机采样）
 			double pdf = rec.mat_ptr->sample_wi(wi, wo, normal);
-			vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal);
+			vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal, rec.uv);
 			ray new_ray(rec.p + wi * 0.0001, wi);
 			vec3 radiance_indirect = ray_color(new_ray, world, depth - 1, light_ptr_list) * brdf * dot(normal, wi) / pdf / P_RR;
 			radiance_indirect = clamp(radiance_indirect, 0, std::numeric_limits<double>::infinity());
@@ -171,7 +171,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 			else
 			{
 				double distance_light_square = (position_light - position_hit).length_squared(); // shading point到光源采样点距离的平方
-				vec3 brdf_light = rec.mat_ptr->brdf(wi_light, wo, normal);
+				vec3 brdf_light = rec.mat_ptr->brdf(wi_light, wo, normal, rec.uv);
 				vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normal, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light); // 直接光
 				radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
 			}
@@ -184,7 +184,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 			// 随机采样入射光方向获取间接光照
 			vec3 wi; // 入射方向（随机采样）
 			double pdf = rec.mat_ptr->sample_wi(wi, wo, normal);
-			vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal);
+			vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal, rec.uv);
 			ray new_ray(rec.p + wi * 0.0001, wi);
 			vec3 radiance_indirect = ray_color(new_ray, bvh_root, depth - 1, light_ptr_list) * brdf * dot(normal, wi) / pdf / P_RR;
 			radiance_indirect = clamp(radiance_indirect, 0, std::numeric_limits<double>::infinity());
