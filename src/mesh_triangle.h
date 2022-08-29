@@ -142,7 +142,7 @@ public:
 		}
 		// 预先设定triangle_ptr_list长度
 		triangle_ptr_list.resize(num_triangle);
-
+		
 		// 对每个mesh分别进行读取
 		int triangle_ptr_index = 0;
 		for (objl::Mesh mesh : mesh_list) {
@@ -160,7 +160,7 @@ public:
 			position_list.resize(vertex_num);
 			uv_list.resize(vertex_num);
 			normal_list.resize(vertex_num);
-
+			
 			for (int index = 0; index < vertex_num; index++) {
 				// 记录顶点位置时，根据自定的blender对应坐标系进行坐标变换
 				// blender中的y对应这里的x
@@ -180,22 +180,24 @@ public:
 				// 记录uv
 				uv_list[index] = vec3(mesh.Vertices[index].TextureCoordinate.X, mesh.Vertices[index].TextureCoordinate.Y, 0);
 			}
-
+			
 			// 生成三角形，并放入triangle_ptr_list
 			int index_num = mesh.Indices.size();
 			// 每三个index一组对应一个三角形
-			for (int index = 0; index < index_num; index += 3) {
+			//std::cout << triangle_ptr_list.size() << ' ' << position_list.size() << '\n';
+			for (int index = 0; index < index_num ; index += 3) {
+				//std::cout << triangle_ptr_index << ' ' << index << '\n';
 				triangle_ptr_list[triangle_ptr_index] = make_shared<triangle>(
-					position_list[mesh.Indices[index]], 
+					position_list[mesh.Indices[index]],
 					position_list[mesh.Indices[index + 1]], 
 					position_list[mesh.Indices[index + 2]],
 					mat_ptr,
-					uv_list[index],
-					uv_list[index + 1], 
-					uv_list[index + 2],
-					normal_list[index],
-					normal_list[index + 1], 
-					normal_list[index + 2]);
+					uv_list[mesh.Indices[index]],
+					uv_list[mesh.Indices[index + 1]],
+					uv_list[mesh.Indices[index + 2]],
+					normal_list[mesh.Indices[index]],
+					normal_list[mesh.Indices[index + 1]],
+					normal_list[mesh.Indices[index + 2]]);
 				triangle_ptr_index++;
 			}
 		}

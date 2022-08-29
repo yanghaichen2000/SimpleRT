@@ -19,6 +19,9 @@ public:
 	
 	// 获取材质自发光强度
 	virtual vec3 get_radiance() const = 0;
+
+	// 获取法线贴图指针
+	virtual shared_ptr<texture> get_normal_map_ptr() const = 0;
 };
 
 
@@ -26,7 +29,8 @@ public:
 class phong_material : public material {
 public:
 	vec3 radiance; // 自发光强度
-	shared_ptr<texture> color_map_ptr;
+	shared_ptr<texture> color_map_ptr = nullptr;
+	shared_ptr<texture> normal_map_ptr = nullptr;
 	vec3 ks = vec3(0.01, 0.01, 0.01); // 镜面反射系数 TODO：暂时固定
 	float a = 50; // 高光参数，越大表示越光滑 TODO：暂时固定
 
@@ -35,12 +39,14 @@ public:
 	phong_material(vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
 		radiance = radiance_init;
 		color_map_ptr = make_shared<simple_color_texture>(albedo_init);
+		normal_map_ptr = nullptr;
 	}
 
 	// 使用color_map来构造材质
-	phong_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
+	phong_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
+		normal_map_ptr = normal_map_ptr_init;
 	}
 
 	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
@@ -80,6 +86,10 @@ public:
 	virtual vec3 get_radiance() const override {
 		return radiance;
 	}
+
+	virtual shared_ptr<texture> get_normal_map_ptr() const override {
+		return normal_map_ptr;
+	}
 };
 
 
@@ -89,6 +99,8 @@ public:
 	double a; // 粗糙度，[0,1]
 	vec3 F0; // 菲涅尔项初始值（颜色）
 	vec3 radiance; // 自发光强度
+	shared_ptr<texture> color_map_ptr = nullptr;
+	shared_ptr<texture> normal_map_ptr = nullptr;
 
 public:
 	// F0的初始值为黄金
@@ -205,6 +217,10 @@ public:
 
 	virtual vec3 get_radiance() const override {
 		return radiance;
+	}
+
+	virtual shared_ptr<texture> get_normal_map_ptr() const override {
+		return normal_map_ptr;
 	}
 };
 

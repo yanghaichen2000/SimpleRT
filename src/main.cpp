@@ -3,11 +3,7 @@
 #include <algorithm>
 #include "bvh_node.h"
 
-
-
 #define PPM_FILE_NAME "out/out.ppm"
-#define OBJ_FILE_NAME "obj/test.obj"
-#define COLOR_MAP_FILE_NAME "obj/spot_texture.png"
 
 using std::vector;
 using std::fstream;
@@ -16,7 +12,7 @@ using std::cout;
 
 // 特性列表
 // 1. color map					完成
-// 2. normal map				
+// 2. normal map（预计算切线）				
 // 3. bump map					
 // 4. hdri
 // 5. meshtriangle类				完成
@@ -31,9 +27,9 @@ int main()
 #ifdef do_render
 	// 初始化
 	const double aspect_ratio = 1; // 16.0 / 9.0
-	const int image_width = 200; //800
+	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 2;
+	const int samples_per_pixel = 64;
 	const int max_depth = 5;
 
 	// 打开图像文件
@@ -99,8 +95,8 @@ int main()
 	// 设置world
 
 	// 球
-	world.add(make_shared<sphere>(point3(0.8, -1.2, -5.2), 0.79, aluminum));
-	world.add(make_shared<sphere>(point3(-0.8, -0.8, -6.8), 1.19, gold));
+	//world.add(make_shared<sphere>(point3(0.8, -1.2, -5.2), 0.79, aluminum));
+	//world.add(make_shared<sphere>(point3(-0.8, -0.8, -6.8), 1.19, gold));
 	
 	// cornell box
 	world.add(make_shared<triangle>(tri1));
@@ -119,10 +115,22 @@ int main()
 	world.add(make_shared<triangle>(tri14));
 
 	// obj
-	shared_ptr<texture> cow_color_map = make_shared<color_map>(COLOR_MAP_FILE_NAME);
-	shared_ptr<material> cow_phong_color_material = make_shared<phong_material>(cow_color_map);
-	shared_ptr<mesh_triangle> mesh1 = make_shared<simple_obj_mesh>(OBJ_FILE_NAME, cow_phong_color_material);
-	world.add(mesh1);
+	shared_ptr<texture> cow_color_map = make_shared<color_map>("obj/spot_texture.png");
+	shared_ptr<material> cow_phong_material = make_shared<phong_material>(cow_color_map);
+	shared_ptr<mesh_triangle> mesh1 = make_shared<simple_obj_mesh>("obj/cow.obj", cow_phong_material);
+	//world.add(mesh1);
+
+	shared_ptr<texture> cube_color_map = make_shared<color_map>("obj/brick_d.jpg", 2);
+	shared_ptr<texture> cube_normal_map = make_shared<normal_map>("obj/brick_n.jpg", 2);
+	shared_ptr<material> cube_phong_material = make_shared<phong_material>(cube_color_map, vec3(0, 0, 0), cube_normal_map);
+	shared_ptr<material> cube_phong_material_simple = make_shared<phong_material>(cube_color_map);
+	shared_ptr<mesh_triangle> mesh2 = make_shared<simple_obj_mesh>("obj/back.obj", cube_phong_material);
+	//world.add(mesh2);
+
+	shared_ptr<mesh_triangle> mesh3 = make_shared<simple_obj_mesh>("obj/cube_left.obj", cube_phong_material);
+	shared_ptr<mesh_triangle> mesh4 = make_shared<simple_obj_mesh>("obj/cube_right.obj", cube_phong_material_simple);
+	world.add(mesh3);
+	world.add(mesh4);
 
 	// 长方体
 	/*

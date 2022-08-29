@@ -16,6 +16,7 @@ public:
 	vec3 uv[3]; // 纹理空间坐标，使用xy项作为uv
 	shared_ptr<material> mat_ptr; // material
 	vec3 vertex_normal[3]; // 顶点法线
+	vec3 tangent; // 切线。实现法线贴图时需要用到该信息
 
 public:
 	// 使用三个顶点的位置和法线以及一个material初始化
@@ -39,6 +40,18 @@ public:
 		vertex_normal[0] = vertex_normal_1;
 		vertex_normal[1] = vertex_normal_2;
 		vertex_normal[2] = vertex_normal_3;
+
+		// 计算切线
+		// 原理可以参考zhuanlan.zhihu.com/p/414940275
+		vec3 AB = vertex[1] - vertex[0];
+		vec3 AC = vertex[2] - vertex[0];
+		double du1 = uv[2][0] - uv[0][0];
+		double du2 = uv[1][0] - uv[0][0];
+		double dv1 = uv[2][1] - uv[0][1];
+		double dv2 = uv[1][1] - uv[0][1];
+		// 得到切线（未正交化）
+		tangent = (dv1 * AB - dv2 * AC) / (du2 * dv1 - du1 * dv2);
+		tangent = unit_vector(tangent);
 	}
 
 	// 使用三个顶点的位置（无法线）以及一个material初始化
@@ -49,6 +62,7 @@ public:
 		vertex[0] = vertex_1;
 		vertex[1] = vertex_2;
 		vertex[2] = vertex_3;
+
 		mat_ptr = mat_ptr_all;
 
 		// 不支持uv
@@ -60,6 +74,9 @@ public:
 		vertex_normal[0] = unit_vector(cross(vertex[1] - vertex[0], vertex[2] - vertex[0]));
 		vertex_normal[1] = vertex_normal[0];
 		vertex_normal[2] = vertex_normal[0];
+
+		// 该构造函数不支持uv，所以用不了法线贴图，所以不需要计算切线
+		tangent = vec3(0, 0, 0);
 	}
 
 	virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override {
@@ -94,10 +111,25 @@ public:
 		// 计算法线，
 		// 这里使用平滑着色，根据顶点法线插值得到shading point法线
 		vec3 normal = w0 * vertex_normal[0] + w1 * vertex_normal[1] + w2 * vertex_normal[2];
+		normal = unit_vector(normal);
+
+		// 如果存在法线贴图则使用法线贴图对法线进行处理
+		if (mat_ptr->get_normal_map_ptr() != nullptr) {
+			// 根据成员变量tangent来计算正交且单位的切线基向量
+			vec3 basis_t = unit_vector(tangent - dot(tangent, normal) * normal);
+			// 计算副切线基向量
+			vec3 basis_b = cross(basis_t, normal);
+			// 从法线贴图获取切线空间坐标
+			vec3 tangent_coord = mat_ptr->get_normal_map_ptr()->get_value(rec.uv);
+			// 计算法线
+			normal = basis_t * tangent_coord[0] + basis_b * tangent_coord[1] + normal * tangent_coord[2];
+		}
+
 		rec.set_face_normal(r, normal);
 
 		// 计算texture中的material参数并修改
 		rec.mat_ptr = mat_ptr;
+
 		return true;
 	}
 
