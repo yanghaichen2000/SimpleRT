@@ -118,7 +118,7 @@ public:
 			// 根据成员变量tangent来计算正交且单位的切线基向量
 			vec3 basis_t = unit_vector(tangent - dot(tangent, normal) * normal);
 			// 计算副切线基向量
-			vec3 basis_b = cross(basis_t, normal);
+			vec3 basis_b = cross(normal, basis_t);
 			// 从法线贴图获取切线空间坐标
 			vec3 tangent_coord = mat_ptr->get_normal_map_ptr()->get_value(rec.uv);
 			// 计算法线

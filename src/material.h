@@ -97,16 +97,24 @@ public:
 class ggx_material : public material {
 public:
 	double a; // 粗糙度，[0,1]
-	vec3 F0; // 菲涅尔项初始值（颜色）
 	vec3 radiance; // 自发光强度
-	shared_ptr<texture> color_map_ptr = nullptr;
+	shared_ptr<texture> color_map_ptr = nullptr; // 菲涅尔项初始值（颜色）
 	shared_ptr<texture> normal_map_ptr = nullptr;
 
 public:
-	// F0的初始值为黄金
-	ggx_material(const double &a_init = 0.5, const vec3 &F0_init = vec3(1, 0.582, 0.0956)) {
+	// 用一种颜色构造material
+	ggx_material(const double &a_init, const vec3 &F0_init = vec3(1, 0.582, 0.0956), vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
 		a = a_init;
-		F0 = F0_init;
+		color_map_ptr = make_shared<simple_color_texture>(F0_init);
+		radiance = radiance_init;
+	}
+
+	// 用color_map构造material，同时也支持法线贴图
+	ggx_material(const double &a_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
+		
+		a = a_init;
+		color_map_ptr = color_map_ptr_init;
+		normal_map_ptr = normal_map_ptr_init;
 	}
 
 	// 必须输入单位向量!!!!!!!!
@@ -200,7 +208,7 @@ public:
 	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
 		// F 菲涅尔项
 		vec3 h = unit_vector(wi + wo);
-		vec3 F = F0 + (vec3(1.0, 1.0, 1.0) - F0) * pow(1 - dot(wo, h), 5);
+		vec3 F = color_map_ptr->get_value(uv) + (vec3(1.0, 1.0, 1.0) - color_map_ptr->get_value(uv)) * pow(1 - dot(wo, h), 5);
 
 		// D NDF项
 		double a2 = a * a;

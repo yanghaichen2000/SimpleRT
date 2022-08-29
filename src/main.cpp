@@ -11,14 +11,17 @@ using std::thread;
 using std::cout;
 
 // 特性列表
-// 1. color map					完成
-// 2. normal map（预计算切线）				
-// 3. bump map					
-// 4. hdri
-// 5. meshtriangle类				完成
-// 6. 基础obj加载				完成
-// 7. 景深
-// 8. bloom
+// 1.  图像纹理						完成
+// 2.  法线贴图（预计算切线）			完成	
+// 3.  视差贴图					
+// 4.  hdri
+// 5.  meshtriangle类				完成
+// 6.  基础obj加载					完成
+// 7.  景深
+// 8.  bloom
+// 9.  ggx多次弹射补偿
+// 10. vec3替换为eigen::Vector3d
+
 
 #define do_render
 
@@ -27,7 +30,7 @@ int main()
 #ifdef do_render
 	// 初始化
 	const double aspect_ratio = 1; // 16.0 / 9.0
-	const int image_width = 1024; //800
+	const int image_width = 768; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
 	const int samples_per_pixel = 64;
 	const int max_depth = 5;
@@ -120,25 +123,17 @@ int main()
 	shared_ptr<mesh_triangle> mesh1 = make_shared<simple_obj_mesh>("obj/cow.obj", cow_phong_material);
 	//world.add(mesh1);
 
-	shared_ptr<texture> cube_color_map = make_shared<color_map>("obj/brick_d.jpg", 2);
-	shared_ptr<texture> cube_normal_map = make_shared<normal_map>("obj/brick_n.jpg", 2);
-	shared_ptr<material> cube_phong_material = make_shared<phong_material>(cube_color_map, vec3(0, 0, 0), cube_normal_map);
-	shared_ptr<material> cube_phong_material_simple = make_shared<phong_material>(cube_color_map);
-	shared_ptr<mesh_triangle> mesh2 = make_shared<simple_obj_mesh>("obj/back.obj", cube_phong_material);
+	shared_ptr<texture> cube_color_map = make_shared<color_map>("obj/bonded_d.jpg", 1);
+	shared_ptr<texture> cube_normal_map = make_shared<normal_map>("obj/bonded_n.jpg", 1);
+	shared_ptr<material> cube_ggx_material = make_shared<ggx_material>(0.05, cube_color_map, vec3(0, 0, 0), cube_normal_map);
+	shared_ptr<material> cube_ggx_material_simple = make_shared<ggx_material>(0.05, cube_color_map);
+	shared_ptr<mesh_triangle> mesh2 = make_shared<simple_obj_mesh>("obj/back.obj", cube_ggx_material);
 	//world.add(mesh2);
 
-	shared_ptr<mesh_triangle> mesh3 = make_shared<simple_obj_mesh>("obj/cube_left.obj", cube_phong_material);
-	shared_ptr<mesh_triangle> mesh4 = make_shared<simple_obj_mesh>("obj/cube_right.obj", cube_phong_material_simple);
+	shared_ptr<mesh_triangle> mesh3 = make_shared<simple_obj_mesh>("obj/cube_left.obj", cube_ggx_material);
+	shared_ptr<mesh_triangle> mesh4 = make_shared<simple_obj_mesh>("obj/cube_right.obj", cube_ggx_material_simple);
 	world.add(mesh3);
 	world.add(mesh4);
-
-	// 长方体
-	/*
-	shared_ptr<mesh_triangle> c1 = make_shared<cuboid>(1, 1, 1, white);
-	c1->set_translate(vec3(-0.7, -1.5, -5));
-	c1->set_rotate(vec3(0, pi / 6, 0));
-	world.add(c1);
-	*/
 
 	// 获取world的bvh根节点
 	std::cout << "generating bvh...\n";
