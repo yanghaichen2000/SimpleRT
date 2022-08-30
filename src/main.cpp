@@ -10,6 +10,7 @@ using std::fstream;
 using std::thread;
 using std::cout;
 
+
 // 特性列表
 // 1.  图像纹理						完成
 // 2.  法线贴图（预计算切线）			完成	
@@ -30,9 +31,9 @@ int main()
 #ifdef do_render
 	// 初始化
 	const double aspect_ratio = 1; // 16.0 / 9.0
-	const int image_width = 768; //800
+	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 64;
+	const int samples_per_pixel = 8;
 	const int max_depth = 5;
 
 	// 打开图像文件
@@ -54,9 +55,9 @@ int main()
 	shared_ptr<material> light_low = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(3, 3, 3));
 	shared_ptr<material> light_super = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(10, 10, 10));
 	shared_ptr<material> light_false = make_shared<phong_material>(vec3(0, 0, 0), vec3(1, 1, 1));
-	shared_ptr<material> red = make_shared<phong_material>(vec3(0.6, 0.01, 0.01), vec3(0, 0, 0));
+	shared_ptr<material> red = make_shared<phong_material>(vec3(0.5, 0.05, 0.05), vec3(0, 0, 0));
 	shared_ptr<material> blue = make_shared<phong_material>(vec3(0, 0, 1.0), vec3(0, 0, 0));
-	shared_ptr<material> green = make_shared<phong_material>(vec3(0.01, 0.6, 0.01), vec3(0, 0, 0));
+	shared_ptr<material> green = make_shared<phong_material>(vec3(0.05, 0.5, 0.05), vec3(0, 0, 0));
 	shared_ptr<material> phong_2 = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(0, 0, 0));
 	shared_ptr<material> white = make_shared<phong_material>(vec3(1, 1, 1), vec3(0, 0, 0));
 	shared_ptr<material> gold = make_shared<ggx_material>(0.2);
@@ -73,10 +74,10 @@ int main()
 	vec3 vertex_6(2, 2, -8);
 	vec3 vertex_7(2, 2, 0.1);
 	vec3 vertex_8(-2, 2, 0.1);
-	vec3 light_vertex_1 = vec3(-0.5, 1.999, -6.5);
-	vec3 light_vertex_2 = vec3(0.5, 1.999, -6.5);
-	vec3 light_vertex_3 = vec3(0.5, 1.999, -5.5);
-	vec3 light_vertex_4 = vec3(-0.5, 1.999, -5.5);
+	vec3 light_vertex_1 = vec3(-0.5, 1.999, -5.5);
+	vec3 light_vertex_2 = vec3(0.5, 1.999, -5.5);
+	vec3 light_vertex_3 = vec3(0.5, 1.999, -4.5);
+	vec3 light_vertex_4 = vec3(-0.5, 1.999, -4.5);
 
 	// 三角形实例
 	auto box_material = white;
@@ -118,22 +119,63 @@ int main()
 	world.add(make_shared<triangle>(tri14));
 
 	// obj
-	shared_ptr<texture> cow_color_map = make_shared<color_map>("obj/spot_texture.png");
-	shared_ptr<material> cow_phong_material = make_shared<phong_material>(cow_color_map);
-	shared_ptr<mesh_triangle> mesh1 = make_shared<simple_obj_mesh>("obj/cow.obj", cow_phong_material);
-	//world.add(mesh1);
+	///*
+	shared_ptr<texture> tex_glx_cloth = make_shared<color_map>("obj/final/cloth.png");
+	shared_ptr<texture> tex_glx_eye = make_shared<color_map>("obj/final/eye.png");
+	shared_ptr<texture> tex_glx_face = make_shared<color_map>("obj/final/face.png");
+	shared_ptr<texture> tex_glx_hair = make_shared<color_map>("obj/final/hair.png");
+	shared_ptr<texture> tex_glx_biaoqing = make_shared<color_map>("obj/final/biaoqing.png");
+	shared_ptr<texture> tex_cow = make_shared<color_map>("obj/final/spot_texture.png");
+	shared_ptr<texture> tex_cube_d = make_shared<color_map>("obj/final/bonded_d.jpg", 0.5);
+	shared_ptr<texture> tex_cube_n = make_shared<normal_map>("obj/final/bonded_n.jpg", 0.5);
 
-	shared_ptr<texture> cube_color_map = make_shared<color_map>("obj/bonded_d.jpg", 1);
-	shared_ptr<texture> cube_normal_map = make_shared<normal_map>("obj/bonded_n.jpg", 1);
-	shared_ptr<material> cube_ggx_material = make_shared<ggx_material>(0.05, cube_color_map, vec3(0, 0, 0), cube_normal_map);
-	shared_ptr<material> cube_ggx_material_simple = make_shared<ggx_material>(0.05, cube_color_map);
-	shared_ptr<mesh_triangle> mesh2 = make_shared<simple_obj_mesh>("obj/back.obj", cube_ggx_material);
-	//world.add(mesh2);
+	shared_ptr<material> mat_glx_cloth = make_shared<phong_material>(tex_glx_cloth);
+	shared_ptr<material> mat_glx_eye = make_shared<phong_material>(tex_glx_eye);
+	shared_ptr<material> mat_glx_face = make_shared<phong_material>(tex_glx_face);
+	shared_ptr<material> mat_glx_hair = make_shared<phong_material>(tex_glx_hair);
+	shared_ptr<material> mat_glx_biaoqing = make_shared<phong_material>(tex_glx_biaoqing);
+	shared_ptr<material> mat_cow = make_shared<phong_material>(tex_cow);
+	shared_ptr<material> mat_cube = make_shared<ggx_material>(0.03, tex_cube_d, vec3(0, 0, 0), tex_cube_n);
+	shared_ptr<material> mat_monkey = make_shared<ggx_material>(0.005);
+	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
-	shared_ptr<mesh_triangle> mesh3 = make_shared<simple_obj_mesh>("obj/cube_left.obj", cube_ggx_material);
-	shared_ptr<mesh_triangle> mesh4 = make_shared<simple_obj_mesh>("obj/cube_right.obj", cube_ggx_material_simple);
-	world.add(mesh3);
-	world.add(mesh4);
+	unordered_map<string, shared_ptr<material>> material_dict;
+	material_dict[string("monkey")] = mat_monkey;
+	material_dict[string("cow")] = mat_cow;
+	material_dict[string("cube")] = mat_cube;
+	material_dict[string("biaoqing")] = mat_glx_biaoqing;
+	material_dict[string("pifu")] = mat_glx_cloth;
+	material_dict[string("bozi")] = mat_glx_cloth;
+	material_dict[string("tui")] = mat_glx_cloth;
+	material_dict[string("yifu")] = mat_glx_cloth;
+	material_dict[string("qunzi")] = mat_glx_cloth;
+	material_dict[string("qundai")] = mat_glx_cloth;
+	material_dict[string("xionghua")] = mat_glx_cloth;
+	material_dict[string("hudiejie")] = mat_glx_cloth;
+	material_dict[string("hudiejiehua")] = mat_glx_cloth;
+	material_dict[string("qunhua")] = mat_glx_cloth;
+	material_dict[string("quncejia")] = mat_glx_cloth;
+	material_dict[string("qunjia")] = mat_glx_cloth;
+	material_dict[string("beishi")] = mat_glx_cloth;
+	material_dict[string("shoutao")] = mat_glx_cloth;
+	material_dict[string("maozi")] = mat_glx_cloth;
+	material_dict[string("toushi")] = mat_glx_cloth;
+	material_dict[string("qunzi.001")] = mat_glx_cloth;
+	material_dict[string("qunzi1")] = mat_glx_cloth;
+	material_dict[string("qunzi2")] = mat_glx_cloth;
+	material_dict[string("qunzi3")] = mat_glx_cloth;
+	material_dict[string("toufa")] = mat_glx_hair;
+	material_dict[string("bianzi")] = mat_glx_hair;
+	material_dict[string("lian")] = mat_glx_face;
+	material_dict[string("meimao")] = mat_glx_face;
+	material_dict[string("yanbai")] = mat_glx_face;
+	material_dict[string("yanjing")] = mat_glx_eye;
+	material_dict[string("kouqiang")] = mat_glx_face;
+
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/final/final.obj", material_dict, mat_default);
+	world.add(mesh);
+	//*/
+
 
 	// 获取world的bvh根节点
 	std::cout << "generating bvh...\n";
@@ -141,7 +183,7 @@ int main()
 	std::cout << "bvh is ready\n";
 
 	// 设置light
-	vec3 light_center = vec3(0, 2, -6);
+	vec3 light_center = vec3(0, 2, -5);
 	vec3 light_normal = vec3(0, -1, 0);
 	vec3 light_radiance = vec3(17, 17, 17);
 	circle_light light_1(light_center, light_normal, 0.5, light_radiance);
