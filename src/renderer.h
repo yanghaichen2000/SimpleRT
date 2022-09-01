@@ -202,7 +202,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 	}
 
 	// 如果什么都没打中，则返回环境光
-	return vec3(0.1, 0.1, 0.1);
+	return vec3(0, 0, 0);
 }
 
 

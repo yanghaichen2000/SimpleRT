@@ -85,9 +85,9 @@ public:
 		double col = real_uv[0] * (cols - 1);
 
 		// 获得相邻四个像素的坐标
-		int row_0 = std::floor(row);
+		int row_0 = static_cast<int>(std::floor(row));
 		int row_1 = row_0 + 1;
-		int col_0 = std::floor(col);
+		int col_0 = static_cast<int>(std::floor(col));
 		int col_1 = col_0 + 1;
 
 		// 在列上插值
@@ -169,9 +169,9 @@ public:
 		double col = real_uv[0] * (cols - 1);
 
 		// 获得相邻四个像素的坐标
-		int row_0 = std::floor(row);
+		int row_0 = static_cast<int>(std::floor(row));
 		int row_1 = row_0 + 1;
-		int col_0 = std::floor(col);
+		int col_0 = static_cast<int>(std::floor(col));
 		int col_1 = col_0 + 1;
 
 		// 在列上插值

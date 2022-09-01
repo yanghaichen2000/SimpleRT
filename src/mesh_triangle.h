@@ -170,7 +170,7 @@ public:
 				// blender中的y对应这里的x
 				// blender中的z对应这里的y
 				// blender中的x对应这里的z
-				// 但是直接使用上述映射没有得到正确的结果，所以实际代码使用了一个逆天的hack，暂时不知道原因
+				// 但是直接使用上述映射没有得到正确的结果，所以实际代码使用了一个hack，暂时不知道原理
 				//position_list[index] = vec3(mesh.Vertices[index].Position.Y, mesh.Vertices[index].Position.Z, mesh.Vertices[index].Position.X); // 理论正确
 				position_list[index] = vec3(-mesh.Vertices[index].Position.Z, mesh.Vertices[index].Position.Y, mesh.Vertices[index].Position.X); // 实际正确
 				// 应用mesh_triangle自带的变换
@@ -312,7 +312,7 @@ public:
 				// blender中的y对应这里的x
 				// blender中的z对应这里的y
 				// blender中的x对应这里的z
-				// 但是直接使用上述映射没有得到正确的结果，所以实际代码使用了一个逆天的hack，暂时不知道原因
+				// 但是直接使用上述映射没有得到正确的结果，所以实际代码使用了一个hack，暂时不知道原理
 				//position_list[index] = vec3(mesh.Vertices[index].Position.Y, mesh.Vertices[index].Position.Z, mesh.Vertices[index].Position.X); // 理论正确
 				position_list[index] = vec3(-mesh.Vertices[index].Position.Z, mesh.Vertices[index].Position.Y, mesh.Vertices[index].Position.X); // 实际正确
 				// 应用mesh_triangle自带的变换
