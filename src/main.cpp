@@ -25,6 +25,7 @@ using std::cout;
 // 11. bssrdf
 // 12. btdf
 // 13. 体积
+// 14. 透明材质						完成（）
 
 
 #define do_render
@@ -36,7 +37,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 2;
+	const int samples_per_pixel = 8;
 	const int max_depth = 5;
 
 	// 打开图像文件
@@ -58,9 +59,9 @@ int main()
 	shared_ptr<material> light_low = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(3, 3, 3));
 	shared_ptr<material> light_super = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(10, 10, 10));
 	shared_ptr<material> light_false = make_shared<phong_material>(vec3(0, 0, 0), vec3(1, 1, 1));
-	shared_ptr<material> red = make_shared<phong_material>(vec3(0.5, 0.05, 0.05), vec3(0, 0, 0));
+	shared_ptr<material> red = make_shared<phong_material>(vec3(0.8, 0, 0), vec3(0, 0, 0));
 	shared_ptr<material> blue = make_shared<phong_material>(vec3(0, 0, 1.0), vec3(0, 0, 0));
-	shared_ptr<material> green = make_shared<phong_material>(vec3(0.05, 0.5, 0.05), vec3(0, 0, 0));
+	shared_ptr<material> green = make_shared<phong_material>(vec3(0, 0.8, 0), vec3(0, 0, 0));
 	shared_ptr<material> phong_2 = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(0, 0, 0));
 	shared_ptr<material> white = make_shared<phong_material>(vec3(1, 1, 1), vec3(0, 0, 0));
 	shared_ptr<material> gold = make_shared<ggx_material>(0.2);
@@ -77,10 +78,10 @@ int main()
 	vec3 vertex_6(2, 2, -8);
 	vec3 vertex_7(2, 2, -4);
 	vec3 vertex_8(-2, 2, -4);
-	vec3 light_vertex_1 = vec3(-0.5, 1.999, -2.5);
-	vec3 light_vertex_2 = vec3(0.5, 1.999, -2.5);
-	vec3 light_vertex_3 = vec3(0.5, 1.999, -1.5);
-	vec3 light_vertex_4 = vec3(-0.5, 1.999, -1.5);
+	vec3 light_vertex_1 = vec3(-0.5, 1.999, -6.5);
+	vec3 light_vertex_2 = vec3(0.5, 1.999, -6.5);
+	vec3 light_vertex_3 = vec3(0.5, 1.999, -5.5);
+	vec3 light_vertex_4 = vec3(-0.5, 1.999, -5.5);
 
 	// 三角形实例
 	auto box_material = white;
@@ -118,50 +119,18 @@ int main()
 	world.add(make_shared<triangle>(tri10));
 	//world.add(make_shared<triangle>(tri11));
 	//world.add(make_shared<triangle>(tri12));
-	//world.add(make_shared<triangle>(tri13));
-	//world.add(make_shared<triangle>(tri14));
+	world.add(make_shared<triangle>(tri13));
+	world.add(make_shared<triangle>(tri14));
 
 	// obj
-	shared_ptr<texture> tex_haku_000 = make_shared<color_map>("obj/final/haku_tex/face_Haku.png");
-	shared_ptr<texture> tex_haku_00B = make_shared<color_map>("obj/final/haku_tex/4tex.png");
-	shared_ptr<texture> tex_haku_00C = make_shared<color_map>("obj/final/haku_tex/hair_MikuAp.png");
-	shared_ptr<texture> tex_haku_00R = make_shared<color_map>("obj/final/haku_tex/jiao.png");
-	shared_ptr<texture> tex_haku_00S = make_shared<color_map>("obj/final/haku_tex/jinshi_1.png");
-	shared_ptr<texture> tex_haku_00S_normal = make_shared<normal_map>("obj/final/haku_tex/jinshi_normal.png");
-	shared_ptr<texture> tex_haku_00V = make_shared<color_map>("obj/final/haku_tex/jinshi.png");
-	shared_ptr<texture> tex_haku_01C = make_shared<color_map>("obj/final/haku_tex/jiaoshi_1.png");
-	shared_ptr<texture> tex_haku_01E = make_shared<color_map>("obj/final/haku_tex/jingshi_1.png");
-	shared_ptr<texture> tex_haku_01L = make_shared<color_map>("obj/final/haku_tex/qunzi_1_2.png");
-	shared_ptr<texture> tex_haku_002 = make_shared<color_map>("obj/final/haku_tex/face_Haku_R.png");
-	shared_ptr<texture> tex_haku_004 = make_shared<color_map>("obj/final/haku_tex/face_HakuOp_bc.png");
-	shared_ptr<texture> tex_haku_009 = make_shared<color_map>("obj/final/haku_tex/body00_MikuAp_b_1.png");
-	shared_ptr<texture> tex_haku_012 = make_shared<color_map>("obj/final/haku_tex/xiezi_01_2.png");
-	shared_ptr<texture> tex_haku_013 = make_shared<color_map>("obj/final/haku_tex/qunzi_1_1.png");
-	shared_ptr<texture> tex_haku_017 = make_shared<color_map>("obj/final/haku_tex/erzhui.png");
+	shared_ptr<texture> tex_cow = make_shared<color_map>("obj/spot_texture.png");
+	shared_ptr<texture> tex_cube = make_shared<color_map>("obj/honey_d.jpg");
+	shared_ptr<texture> tex_cube_n = make_shared<normal_map>("obj/honey_n.jpg");
+	shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(vec3(1, 1, 1));
 	
-	shared_ptr<texture> tex_cow = make_shared<color_map>("obj/final/spot_texture.png");
-	shared_ptr<texture> tex_cube_d = make_shared<color_map>("obj/final/honey_d.jpg");
-	shared_ptr<texture> tex_cube_n = make_shared<normal_map>("obj/final/honey_n.jpg");
-
-	shared_ptr<material> mat_haku_000 = make_shared<phong_material>(tex_haku_000);
-	shared_ptr<material> mat_haku_00B = make_shared<phong_material>(tex_haku_00B);
-	shared_ptr<material> mat_haku_00C = make_shared<phong_material>(tex_haku_00C);
-	shared_ptr<material> mat_haku_00R = make_shared<phong_material>(tex_haku_00R);
-	shared_ptr<material> mat_haku_00S = make_shared<phong_material>(tex_haku_00S, vec3(0, 0, 0), tex_haku_00S_normal);
-	shared_ptr<material> mat_haku_00V = make_shared<phong_material>(tex_haku_00V);
-	shared_ptr<material> mat_haku_01C = make_shared<phong_material>(tex_haku_01C);
-	shared_ptr<material> mat_haku_01E = make_shared<phong_material>(tex_haku_01E);
-	shared_ptr<material> mat_haku_01L = make_shared<phong_material>(tex_haku_01L);
-	shared_ptr<material> mat_haku_002 = make_shared<phong_material>(tex_haku_002);
-	shared_ptr<material> mat_haku_004 = make_shared<phong_material>(tex_haku_004);
-	shared_ptr<material> mat_haku_009 = make_shared<phong_material>(tex_haku_009);
-	shared_ptr<material> mat_haku_012 = make_shared<phong_material>(tex_haku_012);
-	shared_ptr<material> mat_haku_013 = make_shared<phong_material>(tex_haku_013);
-	shared_ptr<material> mat_haku_017 = make_shared<phong_material>(tex_haku_017);
-	
-	shared_ptr<material> mat_cow = make_shared<phong_material>(tex_cow);
-	shared_ptr<material> mat_cube = make_shared<ggx_material>(0.1, tex_cube_d, vec3(0, 0, 0), tex_cube_n);
-	shared_ptr<material> mat_bunny = white;
+	shared_ptr<material> mat_cow = make_shared<phong_material>(20, tex_cow);
+	shared_ptr<material> mat_cube = make_shared<ggx_material>(0.1, tex_cube, vec3(0, 0, 0), tex_cube_n);
+	shared_ptr<material> mat_bunny = make_shared<phong_material>(tex_bunny);
 
 	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
@@ -169,26 +138,9 @@ int main()
 	material_dict[string("mat_cow")] = mat_cow;
 	material_dict[string("mat_cube")] = mat_cube;
 	material_dict[string("mat_bunny")] = mat_bunny;
-	material_dict[string("mat_haku_000")] = material_dict[string("mat_haku_000_2")] = mat_haku_000;
-	material_dict[string("mat_haku_002")] = material_dict[string("mat_haku_002_2")] = mat_haku_002;
-	material_dict[string("mat_haku_004")] = material_dict[string("mat_haku_004_2")] = mat_haku_004;
-	material_dict[string("mat_haku_009")] = material_dict[string("mat_haku_009_2")] = mat_haku_009;
-	material_dict[string("mat_haku_00B")] = material_dict[string("mat_haku_00B_2")] = mat_haku_00B;
-	material_dict[string("mat_haku_00C")] = material_dict[string("mat_haku_00C_2")] = mat_haku_00C;
-	material_dict[string("mat_haku_00R")] = material_dict[string("mat_haku_00R_2")] = mat_haku_00R;
-	material_dict[string("mat_haku_00S")] = material_dict[string("mat_haku_00S_2")] = mat_haku_00S;
-	material_dict[string("mat_haku_00V")] = material_dict[string("mat_haku_00V_2")] = mat_haku_00V;
-	material_dict[string("mat_haku_012")] = material_dict[string("mat_haku_012_2")] = mat_haku_012;
-	material_dict[string("mat_haku_013")] = material_dict[string("mat_haku_013_2")] = mat_haku_013;
-	material_dict[string("mat_haku_017")] = material_dict[string("mat_haku_017_2")] = mat_haku_017;
-	material_dict[string("mat_haku_01C")] = material_dict[string("mat_haku_01C_2")] = mat_haku_01C;
-	material_dict[string("mat_haku_01E")] = material_dict[string("mat_haku_01E_2")] = mat_haku_01E;
-	material_dict[string("mat_haku_01L")] = material_dict[string("mat_haku_01L_2")] = mat_haku_01L;
 
-
-	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/final/final.obj", material_dict, mat_default);
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test.obj", material_dict, mat_default);
 	world.add(mesh);
-
 
 
 	// 获取world的bvh根节点
@@ -197,9 +149,9 @@ int main()
 	std::cout << "bvh is ready\n";
 
 	// 设置light
-	vec3 light_center = vec3(0, 0.6, -2);
-	vec3 light_normal = unit_vector(vec3(0, 0, -1));
-	vec3 light_radiance = vec3(26, 26, 26);
+	vec3 light_center = vec3(0, 1.99, -6);
+	vec3 light_normal = unit_vector(vec3(0, -1, 0));
+	vec3 light_radiance = vec3(15, 15, 15);
 	circle_light light_1(light_center, light_normal, 0.5, light_radiance);
 	shared_ptr<light> light_ptr_1 = make_shared<circle_light>(light_1); // 圆形光源
 

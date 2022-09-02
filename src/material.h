@@ -22,6 +22,9 @@ public:
 
 	// 获取法线贴图指针
 	virtual shared_ptr<texture> get_normal_map_ptr() const = 0;
+
+	// 获取图像纹理指针
+	virtual shared_ptr<texture> get_color_map_ptr() const = 0;
 };
 
 
@@ -31,14 +34,25 @@ public:
 	vec3 radiance; // 自发光强度
 	shared_ptr<texture> color_map_ptr = nullptr;
 	shared_ptr<texture> normal_map_ptr = nullptr;
-	vec3 ks = vec3(0.01, 0.01, 0.01); // 镜面反射系数 TODO：暂时固定
-	float a = 50; // 高光参数，越大表示越光滑 TODO：暂时固定
+	vec3 kd = vec3(0.9, 0.9, 0.9); // 漫反射系数
+	vec3 ks = vec3(0.1, 0.1, 0.1); // 镜面反射系数
+	double a = 0; // 高光参数，越大则高光越小。默认a = 0，即漫反射材质
 
 public:
-	// 使用一个颜色来构造材质，自动生成类型为simple_color_texture的纹理
+	// 使用一个颜色来构造材质
+	// 自动生成类型为simple_color_texture的纹理
 	phong_material(vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
 		radiance = radiance_init;
 		color_map_ptr = make_shared<simple_color_texture>(albedo_init);
+		normal_map_ptr = nullptr;
+	}
+
+	// 使用高光参数和一个颜色来构造材质
+	// 自动生成类型为simple_color_texture的纹理
+	phong_material(double a_init, vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
+		radiance = radiance_init;
+		color_map_ptr = make_shared<simple_color_texture>(albedo_init);
+		a = a_init;
 		normal_map_ptr = nullptr;
 	}
 
@@ -49,6 +63,15 @@ public:
 		normal_map_ptr = normal_map_ptr_init;
 	}
 
+	// 使用高光参数和color_map来构造材质
+	phong_material(double a_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
+		radiance = radiance_init;
+		color_map_ptr = color_map_ptr_init;
+		a = a_init;
+		normal_map_ptr = normal_map_ptr_init;
+	}
+
+	// www.cs.princeton.edu/courses/archive/fall08/cos526/assign3/lawrence.pdf
 	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
 		/*
 		// 在上半球均匀采样
@@ -79,8 +102,11 @@ public:
 	// phong brdf
 	// zhuanlan.zhihu.com/p/500811555
 	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
-		auto ret1 = color_map_ptr->get_value(uv) * pi_inv;
-		return ret1;
+		//auto ret1 = color_map_ptr->get_value(uv) * pi_inv;
+		vec3 ret_d = color_map_ptr->get_value(uv) * kd * pi_inv;
+		vec3 ret_s = ks * (a + 2) * pi2_inv * pow(std::max(0.0, dot(normal, unit_vector(wi + wo))), a);
+
+		return ret_d + ret_s;
 	}
 
 	virtual vec3 get_radiance() const override {
@@ -89,6 +115,10 @@ public:
 
 	virtual shared_ptr<texture> get_normal_map_ptr() const override {
 		return normal_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_color_map_ptr() const override {
+		return color_map_ptr;
 	}
 };
 
@@ -229,6 +259,10 @@ public:
 
 	virtual shared_ptr<texture> get_normal_map_ptr() const override {
 		return normal_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_color_map_ptr() const override {
+		return color_map_ptr;
 	}
 };
 

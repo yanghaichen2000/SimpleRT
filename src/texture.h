@@ -17,11 +17,13 @@ public:
 class simple_color_texture : public texture {
 public:
 	vec3 color;
+	double alpha;
 
 public:
-	simple_color_texture(const vec3 &color_init)
+	simple_color_texture(const vec3 &color_init, double alpha_init = 1)
 	{
 		color = clamp(color_init, 0, 1);
+		alpha = alpha_init;
 	}
 
 	virtual vec3 get_value(const vec3 &uv) const override
@@ -31,7 +33,7 @@ public:
 
 	double get_alpha(const vec3 &uv) const override
 	{
-		return 1;
+		return alpha;
 	}
 };
 
@@ -103,7 +105,8 @@ public:
 			}
 		}
 		else { // 通道数不是3也不是4
-			std::cout << "error in texture.h: color_map::color_map(): unsupported image channels.\n";
+			std::cout << "error in texture.h: color_map::color_map(): unsupported image channels = " << image.channels() << "\n";
+			std::cout << "file name : " << file_name << '\n';
 			exit(-1);
 		}
 	}
