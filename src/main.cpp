@@ -36,7 +36,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 8;
+	const int samples_per_pixel = 2;
 	const int max_depth = 5;
 
 	// 打开图像文件
@@ -159,7 +159,7 @@ int main()
 	shared_ptr<material> mat_haku_013 = make_shared<phong_material>(tex_haku_013);
 	shared_ptr<material> mat_haku_017 = make_shared<phong_material>(tex_haku_017);
 	
-	shared_ptr<material> mat_cow = make_shared<ggx_material>(0.7, tex_cow);
+	shared_ptr<material> mat_cow = make_shared<phong_material>(tex_cow);
 	shared_ptr<material> mat_cube = make_shared<ggx_material>(0.1, tex_cube_d, vec3(0, 0, 0), tex_cube_n);
 	shared_ptr<material> mat_bunny = white;
 
@@ -197,8 +197,8 @@ int main()
 	std::cout << "bvh is ready\n";
 
 	// 设置light
-	vec3 light_center = vec3(0, 1.5, -2);
-	vec3 light_normal = unit_vector(vec3(0, -1, -4));
+	vec3 light_center = vec3(0, 0.6, -2);
+	vec3 light_normal = unit_vector(vec3(0, 0, -1));
 	vec3 light_radiance = vec3(26, 26, 26);
 	circle_light light_1(light_center, light_normal, 0.5, light_radiance);
 	shared_ptr<light> light_ptr_1 = make_shared<circle_light>(light_1); // 圆形光源
