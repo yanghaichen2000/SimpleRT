@@ -26,6 +26,12 @@ public:
 		alpha = alpha_init;
 	}
 
+	simple_color_texture(int R, int G, int B, double alpha_init = 1)
+	{
+		color = clamp(vec3(pow(R / 255.0, 2.2), pow(G / 255.0, 2.2), pow(B / 255.0, 2.2)), 0, 1);
+		alpha = alpha_init;
+	}
+
 	virtual vec3 get_value(const vec3 &uv) const override
 	{
 		return color;

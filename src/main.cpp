@@ -14,8 +14,8 @@ using std::cout;
 // 特性列表
 // 1.  图像纹理						完成
 // 2.  法线贴图（预计算切线）			完成	
-// 3.  视差贴图					
-// 4.  hdri
+// 3.  
+// 4.  环境光照
 // 5.  meshtriangle类				完成
 // 6.  基础obj加载					完成
 // 7.  景深
@@ -25,9 +25,9 @@ using std::cout;
 // 11. bssrdf
 // 12. btdf
 // 13. 体积
-// 14. 透明材质						完成（）
+// 14. 透明材质						完成（正确性需要确认）
 // 15. 降噪
-// 16. ggx非金属材质
+// 16. ggx非金属材质					完成
 
 
 #define do_render
@@ -39,7 +39,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 512;
+	const int samples_per_pixel = 2;
 	const int max_depth = 5;
 
 	// 打开图像文件

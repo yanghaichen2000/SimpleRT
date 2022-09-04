@@ -4,14 +4,18 @@
 
 #include "global.h"
 #include "texture.h"
+#include "hittable.h"
 
 struct hit_record;
+using std::tuple;
+using std::make_tuple;
+using std::tie;
 
 class material {
 public:
 	// 采样入射方向存放于wi
-	// 返回值为PDF
-	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const = 0;
+	// 返回值为PDF和入射角
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const = 0;
 	
 	// 计算brdf项
 	// 传入的normal是几何法线，而不是经过normal map变换后的法线
@@ -72,10 +76,11 @@ public:
 	}
 
 	// www.cs.princeton.edu/courses/archive/fall08/cos526/assign3/lawrence.pdf
-	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const override {
 		
 		// 混合cos-weighted采样和高光项重要性采样
 		// 两种采样的频率的比值等于kd与ks之比
+		vec3 wi;
 		double pdf;
 
 		if (random_double() < kd / (kd + ks)) {
@@ -114,16 +119,17 @@ public:
 			// 根据镜面反射计算wi
 			wi = 2 * h * dot(wo, h) - wo;
 
-			// 如果光线穿透，返回一个很大的pdf使该结果无贡献
 			if (dot(wi, normal) < 0) {
-				return 1000000;
+				// 如果光线穿透，返回一个很大的pdf使该结果无贡献
+				pdf = 10000000;
 			}
-
-			// 计算pdf
-			pdf = (a + 1) * pi2_inv * pow(cos(theta), a);
+			else {
+				// 计算pdf
+				pdf = (a + 1) * pi2_inv * pow(cos(theta), a);
+			}
 		}
 
-		return pdf;
+		return make_tuple(pdf, wi);
 		
 	}
 
@@ -177,9 +183,12 @@ public:
 	}
 
 	// 必须输入单位向量!!!!!!!!
-	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const override {
 
 		// 重要性采样微表面法线，使用的分布为ggx NDF
+		double pdf;
+		vec3 wi;
+
 		double rand1, rand2, theta, phi;
 		vec3 h;
 
@@ -200,14 +209,15 @@ public:
 
 		// 如果光线穿透，返回一个很大的pdf使该结果无贡献
 		if (dot(wi, normal) < 0) {
-			return 10000;
+			pdf = 1000000;
+		}
+		else {
+			// pdf由NDF推出
+			double a2 = a * a;
+			pdf = a2 * cos(theta) * pi_inv / pow(pow(cos(theta), 2) * (a2 - 1) + 1, 2) * 0.25 / dot(wo, h);
 		}
 
-		// pdf由NDF推出
-		double a2 = a * a;
-		double pdf = a2 * cos(theta) * pi_inv / pow(pow(cos(theta), 2) * (a2 - 1) + 1, 2) * 0.25 / dot(wo, h);
-
-		return pdf;
+		return make_tuple(pdf, wi);
 	}
 
 	// 必须输入单位向量!!!!!!!!
@@ -266,9 +276,10 @@ public:
 
 	// 必须输入单位向量!!!!!!!!
 	// 随机使用ggx重要性采样或漫反射重要性采样（cos-weighted采样）
-	virtual double sample_wi(vec3 &wi, const vec3 &wo, const vec3 &normal) const override {
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const override {
 
 		double pdf;
+		vec3 wi;
 
 		// 两种采样方法的权重根据菲涅尔项决定，因为它代表了高光项和漫反射项的能量比例
 		if (random_double() < F0) {
@@ -294,12 +305,13 @@ public:
 
 			// 如果光线穿透，返回一个很大的pdf使该结果无贡献
 			if (dot(wi, normal) < 0) {
-				return 10000;
+				pdf = 1000000;
 			}
-
-			// pdf由NDF推出
-			double a2 = a * a;
-			pdf = a2 * cos(theta) * pi_inv / pow(pow(cos(theta), 2) * (a2 - 1) + 1, 2) * 0.25 / dot(wo, h);
+			else {
+				// pdf由NDF推出
+				double a2 = a * a;
+				pdf = a2 * cos(theta) * pi_inv / pow(pow(cos(theta), 2) * (a2 - 1) + 1, 2) * 0.25 / dot(wo, h);
+			}
 		}
 		else {
 			
@@ -320,7 +332,7 @@ public:
 			pdf = cos(theta) * pi_inv;
 		}
 
-		return pdf;
+		return make_tuple(pdf, wi);
 	}
 
 	// 必须输入单位向量!!!!!!!!
