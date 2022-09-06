@@ -102,6 +102,7 @@ int main()
 	triangle tri13(light_vertex_1, light_vertex_2, light_vertex_3, light_false);
 	triangle tri14(light_vertex_1, light_vertex_3, light_vertex_4, light_false);
 
+
 	// 设置world
 
 	// 球
@@ -109,7 +110,7 @@ int main()
 	shared_ptr<texture> tex_sphere = make_shared<simple_color_texture>(vec3(1, 1, 0.1));
 	shared_ptr<material> mat_sphere = make_shared<ggx_nonmetal_material>(0.02, 0.08, tex_sphere);
 	world.add(make_shared<sphere>(point3(-1.3, 0.2, -7.3), 0.7, mat_sphere));
-	
+
 	// cornell box
 	world.add(make_shared<triangle>(tri1));
 	world.add(make_shared<triangle>(tri2));
@@ -153,6 +154,7 @@ int main()
 	shared_ptr<hittable> bvh_root_ptr = generate_bvh(world);
 	std::cout << "bvh is ready\n";
 
+
 	// 设置light
 	vec3 light_center = vec3(0, 1.99, -6);
 	vec3 light_normal = unit_vector(vec3(0, -1, 0));
@@ -170,43 +172,31 @@ int main()
 	light_ptr_list.push_back(light_ptr_2);
 	light_ptr_list.push_back(light_ptr_3);
 
+
 	// 设置camera
 	camera cam(aspect_ratio);
+
 
 	// 初始化framebuffer
 	vector<vec3> framebuffer;
 	framebuffer.assign(image_height * image_width, vec3(0, 0, 0));
 
+
 	// 开始渲染
-	// 由于triangle类的hit()函数有问题，这里world还是会复制给每个线程
-	
-	/*
-	thread t1(render_raw, image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 6, 0);
-	thread t2(render_raw, image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 6, 1);
-	thread t3(render_raw, image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 6, 2);
-	thread t4(render_raw, image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 6, 3);
-	thread t5(render_raw, image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 6, 4);
-	thread t6(render_raw, image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 6, 5);
-	*/
-	///*
 	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 0);
 	thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 1);
 	thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 2);
 	thread t4(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 3);
 	thread t5(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 4);
 	thread t6(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 5);
-	//*/
-	///*
+
 	t1.join();
 	t2.join();
 	t3.join();
 	t4.join();
 	t5.join();
 	t6.join();
-	//*/
 
-	//render_raw(image_height, image_width, samples_per_pixel, max_depth, world, cam, &framebuffer, light_ptr_list, 1, 0);
-	//render_bvh(image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
 
 	// 将颜色从framebuffer写入ppm文件中
 	std::cout << "\nrender finish" << std::endl;

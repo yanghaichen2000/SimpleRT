@@ -13,13 +13,15 @@ using std::tie;
 
 class material {
 public:
-	// 采样入射方向存放于wi
-	// 返回值为PDF和入射角
-	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const = 0;
+	// 返回值为{pdf，入射角}
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const = 0;
 	
+	// 返回值为{pdf，入射点法线，入射点坐标}
+	virtual tuple<double, vec3, vec3> sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const = 0;
+
 	// 计算brdf项
-	// 传入的normal是几何法线，而不是经过normal map变换后的法线
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const = 0;
+	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
+		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const = 0;
 	
 	// 获取材质自发光强度
 	virtual vec3 get_radiance() const = 0;
@@ -76,8 +78,8 @@ public:
 	}
 
 	// www.cs.princeton.edu/courses/archive/fall08/cos526/assign3/lawrence.pdf
-	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const override {
-		
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const {
+
 		// 混合cos-weighted采样和高光项重要性采样
 		// 两种采样的频率的比值等于kd与ks之比
 		vec3 wi;
@@ -94,10 +96,10 @@ public:
 
 			// 利用法线构建坐标系
 			vec3 b1, b2;
-			build_basis(normal, b1, b2);
+			build_basis(normali, b1, b2);
 
 			// 得到wi
-			wi = normal * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
+			wi = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
 
 			pdf = cos(theta) * pi_inv;
 		}
@@ -112,14 +114,14 @@ public:
 			double phi = pi2 * rand2;
 			
 			vec3 b1, b2;
-			build_basis(normal, b1, b2);
+			build_basis(normali, b1, b2);
 
-			vec3 h = normal * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
+			vec3 h = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
 			
 			// 根据镜面反射计算wi
 			wi = 2 * h * dot(wo, h) - wo;
 
-			if (dot(wi, normal) < 0) {
+			if (dot(wi, normali) < 0) {
 				// 如果光线穿透，返回一个很大的pdf使该结果无贡献
 				pdf = 10000000;
 			}
@@ -133,12 +135,18 @@ public:
 		
 	}
 
+	virtual tuple<double, vec3, vec3>
+		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const {
+		return make_tuple(1, normalo, positiono);
+	}
+
 	// phong brdf
 	// zhuanlan.zhihu.com/p/500811555
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
+	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
+		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const override {
 		//auto ret1 = color_map_ptr->get_value(uv) * pi_inv;
 		vec3 ret_d = color_map_ptr->get_value(uv) * kd * pi_inv;
-		vec3 ret_s = vec3(ks, ks, ks) * (a + 2) * pi2_inv * pow(std::max(0.0, dot(normal, unit_vector(wi + wo))), a);
+		vec3 ret_s = vec3(ks, ks, ks) * (a + 2) * pi2_inv * pow(std::max(0.0, dot(normalo, unit_vector(wi + wo))), a);
 
 		return ret_d + ret_s;
 	}
@@ -183,7 +191,7 @@ public:
 	}
 
 	// 必须输入单位向量!!!!!!!!
-	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const override {
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const override {
 
 		// 重要性采样微表面法线，使用的分布为ggx NDF
 		double pdf;
@@ -199,16 +207,16 @@ public:
 
 		// 利用法线构建坐标系
 		vec3 b1, b2;
-		build_basis(normal, b1, b2);
+		build_basis(normali, b1, b2);
 
 		// 得到微观法线(即wi和wo的半程向量)
-		h = normal * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta); // 弄错了一次，注意。
+		h = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta); // 弄错了一次，注意。
 
 		// 根据镜面反射计算wi
 		wi = 2 * h * dot(wo, h) - wo;
 
 		// 如果光线穿透，返回一个很大的pdf使该结果无贡献
-		if (dot(wi, normal) < 0) {
+		if (dot(wi, normali) < 0) {
 			pdf = 1000000;
 		}
 		else {
@@ -220,19 +228,25 @@ public:
 		return make_tuple(pdf, wi);
 	}
 
+	virtual tuple<double, vec3, vec3>
+		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const {
+		return make_tuple(1, normalo, positiono);
+	}
+
 	// 必须输入单位向量!!!!!!!!
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
+	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
+		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const override {
 		// F 菲涅尔项
 		vec3 h = unit_vector(wi + wo);
 		vec3 F = color_map_ptr->get_value(uv) + (vec3(1.0, 1.0, 1.0) - color_map_ptr->get_value(uv)) * pow(1 - dot(wo, h), 5);
 
 		// D NDF项
 		double a2 = a * a;
-		double D = a2 / (pi * pow(pow(dot(normal, h), 2) * (a2 - 1) + 1, 2));
+		double D = a2 / (pi * pow(pow(dot(normalo, h), 2) * (a2 - 1) + 1, 2));
 
 		// G 几何项（考虑遮挡）
-		double dot_n_v = dot(normal, wo);
-		double dot_n_l = dot(normal, wi);
+		double dot_n_v = dot(normalo, wo);
+		double dot_n_l = dot(normalo, wi);
 		double k = a * 0.5;
 		double G = dot_n_v / (dot_n_v * (1 - k) + k) * dot_n_l / (dot_n_l * (1 - k) + k);
 
@@ -251,6 +265,7 @@ public:
 		return color_map_ptr;
 	}
 };
+
 
 // GGX非金属材质
 class ggx_nonmetal_material : public material {
@@ -276,7 +291,7 @@ public:
 
 	// 必须输入单位向量!!!!!!!!
 	// 随机使用ggx重要性采样或漫反射重要性采样（cos-weighted采样）
-	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normal) const override {
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const override {
 
 		double pdf;
 		vec3 wi;
@@ -295,16 +310,16 @@ public:
 
 			// 利用法线构建坐标系
 			vec3 b1, b2;
-			build_basis(normal, b1, b2);
+			build_basis(normali, b1, b2);
 
 			// 得到微观法线(即wi和wo的半程向量)
-			h = normal * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta); // 弄错了一次，注意。
+			h = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta); // 弄错了一次，注意。
 
 			// 根据镜面反射计算wi
 			wi = 2 * h * dot(wo, h) - wo;
 
 			// 如果光线穿透，返回一个很大的pdf使该结果无贡献
-			if (dot(wi, normal) < 0) {
+			if (dot(wi, normali) < 0) {
 				pdf = 1000000;
 			}
 			else {
@@ -324,10 +339,10 @@ public:
 
 			// 利用法线构建坐标系
 			vec3 b1, b2;
-			build_basis(normal, b1, b2);
+			build_basis(normali, b1, b2);
 
 			// 得到wi
-			wi = normal * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
+			wi = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
 
 			pdf = cos(theta) * pi_inv;
 		}
@@ -335,9 +350,15 @@ public:
 		return make_tuple(pdf, wi);
 	}
 
+	virtual tuple<double, vec3, vec3>
+		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const {
+		return make_tuple(1, normalo, positiono);
+	}
+
 	// 必须输入单位向量!!!!!!!!
 	// brdf是漫反射项与高光项的和
-	virtual vec3 brdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec3 &uv) const override {
+	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
+		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const override {
 
 		// 高光项（使用ggx模型）
 
@@ -348,10 +369,10 @@ public:
 		vec3 F(F_value, F_value, F_value);
 		// D NDF项
 		double a2 = a * a;
-		double D = a2 / (pi * pow(pow(dot(normal, h), 2) * (a2 - 1) + 1, 2));
+		double D = a2 / (pi * pow(pow(dot(normalo, h), 2) * (a2 - 1) + 1, 2));
 		// G 几何项（考虑遮挡）
-		double dot_n_v = dot(normal, wo);
-		double dot_n_l = dot(normal, wi);
+		double dot_n_v = dot(normalo, wo);
+		double dot_n_l = dot(normalo, wi);
 		double k = a * 0.5;
 		double G = dot_n_v / (dot_n_v * (1 - k) + k) * dot_n_l / (dot_n_l * (1 - k) + k);
 
@@ -377,5 +398,57 @@ public:
 	}
 };
 
+
+// Blinn-Phong diffuse材质
+class sss_material : public material {
+public:
+	vec3 radiance; // 自发光强度
+	shared_ptr<texture> color_map_ptr = nullptr;
+	shared_ptr<texture> normal_map_ptr = nullptr;
+
+public:
+	// 使用一个颜色来构造材质
+	// 自动生成类型为simple_color_texture的纹理
+	sss_material(vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
+
+	}
+
+
+	// 使用color_map来构造材质
+	sss_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
+
+	}
+
+
+	// www.cs.princeton.edu/courses/archive/fall08/cos526/assign3/lawrence.pdf
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const {
+
+		return make_tuple(0, vec3());
+	}
+
+	virtual tuple<double, vec3, vec3>
+		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const {
+
+		return make_tuple(0, vec3(), vec3());
+	}
+
+	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
+		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const override {
+
+		return vec3();
+	}
+
+	virtual vec3 get_radiance() const override {
+		return radiance;
+	}
+
+	virtual shared_ptr<texture> get_normal_map_ptr() const override {
+		return normal_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_color_map_ptr() const override {
+		return color_map_ptr;
+	}
+};
 
 #endif

@@ -47,34 +47,45 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 		}
 		else {
 			// 计算基本信息
-			vec3 normal = unit_vector(rec.normal); // shading point法线
+			vec3 normalo = unit_vector(rec.normal); // 出射点法线
 			vec3 wo = unit_vector(-r.direction()); // 出射方向
+			vec3 positiono = rec.p; // 出射点坐标
 
 			// 计算直接光
 			vec3 radiance_direct = vec3(0, 0, 0);
 
 			for (shared_ptr<light> light_ptr : light_ptr_list)
 			{
-				// 采样光源
-				vec3 position_hit = rec.p; // shading point坐标
+				// 获取光源的信息
 				vec3 position_light; // 光源采样点坐标
 				vec3 radiance_light; // 光源采样点radiance
 				vec3 normal_light; // 光源采样点法线
 				double pdf_light = light_ptr->sample_p(position_light, radiance_light, normal_light); // 光源采样点pdf
-				vec3 wi_light = unit_vector(position_light - position_hit); // 入射方向（到光源采样点）
 
-				// 计算
-				ray ray_to_light(position_hit, wi_light);
+				// 随机采样入射点
+				double pdf_p; // 入射点采样pdf
+				vec3 normali; // 入射点法线
+				vec3 positioni; // 入射点坐标
+				tie(pdf_p, normali, positioni) = rec.mat_ptr->sample_positioni(normalo, positiono, bvh_root); // 获取入射点采样pdf，入射点法线，入射方向
+
+				// 得到入射方向（到光源采样点）
+				vec3 wi_light = unit_vector(position_light - positioni);
+
+				// 计算光源的贡献
+				ray ray_to_light(positioni, wi_light);
 				hit_record rec_check_block;
-				if (bvh_root->hit(ray_to_light, 0.000001, infinity, rec_check_block) and rec_check_block.t < (position_light - position_hit).length())
+				
+				if (bvh_root->hit(ray_to_light, 0.000001, infinity, rec_check_block) and rec_check_block.t < (position_light - positioni).length())
+				//if(bvh_root->hit(ray_to_light, 0.000001, (position_light - positioni).length(), rec_check_block)) // TODO:这行与上一行理论上等价，但运行结果不同，需要查明原因
 				{
 					radiance_direct += vec3(0, 0, 0); // 有遮挡物则直接光为0
 				}
 				else
 				{
-					double distance_light_square = (position_light - position_hit).length_squared(); // shading point到光源采样点距离的平方
-					vec3 brdf_light = rec.mat_ptr->brdf(wi_light, wo, normal, rec.uv);
-					vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normal, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light); // 直接光
+					double distance_light_square = (position_light - positioni).length_squared(); // shading point到光源采样点距离的平方
+					
+					vec3 brdf_light = rec.mat_ptr->bsdf(wo, normalo, positiono, rec.uv, wi_light, normali, positioni); // 计算到光源的bsdf
+					vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light) / pdf_p; // 直接光
 					radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
 				}
 			}
@@ -85,11 +96,15 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 			{
 				// 随机采样入射光方向获取间接光照
 				vec3 wi; // 入射方向（随机采样）
-				double pdf; // 采样点概率密度
-				tie(pdf, wi) = rec.mat_ptr->sample_wi(wo, normal);
-				vec3 brdf = rec.mat_ptr->brdf(wi, wo, normal, rec.uv);
-				ray new_ray(rec.p + wi * 0.0001, wi);
-				vec3 radiance_indirect = ray_color(new_ray, bvh_root, depth - 1, light_ptr_list) * brdf * dot(normal, wi) / pdf / P_RR;
+				double pdf_w; // 入射方向采样点概率密度
+				double pdf_p; // 入射点位置采样点概率密度
+				vec3 normali; // 入射点法线
+				vec3 positioni; // 入射点坐标
+				tie(pdf_p, normali, positioni) = rec.mat_ptr->sample_positioni(normalo, positiono, bvh_root); // 获取入射点采样pdf，入射点法线，入射方向
+				tie(pdf_w, wi) = rec.mat_ptr->sample_wi(wo, normali);
+				vec3 brdf = rec.mat_ptr->bsdf(wo, normalo, positiono, rec.uv, wi, normali, positioni);
+				ray new_ray(positioni + wi * 0.0001, wi); // 新的光线从入射点射出
+				vec3 radiance_indirect = ray_color(new_ray, bvh_root, depth - 1, light_ptr_list) * brdf * dot(normalo, wi) / (pdf_w * pdf_p * P_RR);
 				radiance_indirect = clamp(radiance_indirect, 0, std::numeric_limits<double>::infinity());
 
 				// 得到最终radiance
