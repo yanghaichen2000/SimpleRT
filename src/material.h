@@ -399,43 +399,130 @@ public:
 };
 
 
-// Blinn-Phong diffuse材质
+#define V 1
 class sss_material : public material {
 public:
 	vec3 radiance; // 自发光强度
+	double F0;
+	double v = V; // 控制散射程度，暂时不能改变值 TODO
+	double v_inv = 1.0 / V; // 控制散射程度，暂时不能改变值 TODO
+	double Rm = 10; // 圆盘采样半径，暂时不能改变值 TODO
+	double Rm2 = 100; // 圆盘采样半径，暂时不能改变值 TODO
 	shared_ptr<texture> color_map_ptr = nullptr;
 	shared_ptr<texture> normal_map_ptr = nullptr;
 
 public:
 	// 使用一个颜色来构造材质
 	// 自动生成类型为simple_color_texture的纹理
-	sss_material(vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
-
+	sss_material(double F0_init, vec3 albedo_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0)) {
+		color_map_ptr = make_shared<simple_color_texture>(albedo_init);
+		radiance = radiance_init;
+		F0 = F0_init;
 	}
 
 
 	// 使用color_map来构造材质
-	sss_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
-
+	sss_material(double F0_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
+		color_map_ptr = color_map_ptr_init;
+		radiance = radiance_init;
+		normal_map_ptr = normal_map_ptr_init;
+		F0 = F0_init;
 	}
 
-
-	// www.cs.princeton.edu/courses/archive/fall08/cos526/assign3/lawrence.pdf
 	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const {
+		
+		// cos-weighted采样
+		double rand1 = random_double();
+		double rand2 = random_double();
 
-		return make_tuple(0, vec3());
+		double theta = acos(sqrt(1 - rand1));
+		double phi = pi2 * rand2;
+
+		// 利用法线构建坐标系
+		vec3 b1, b2;
+		build_basis(normali, b1, b2);
+
+		// 得到wi
+		vec3 wi = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
+
+		double pdf = cos(theta) * pi_inv;
+
+		return make_tuple(pdf, wi);
 	}
 
 	virtual tuple<double, vec3, vec3>
 		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const {
 
-		return make_tuple(0, vec3(), vec3());
+		// 圆盘投影采样
+		// 先在与wo垂直的圆盘上采样
+		double rand1 = random_double();
+		double rand2 = random_double();
+		double r = sqrt(-2 * v * log(1 - rand1 * (1 - exp(-Rm2 * v_inv * 0.5))));
+		double phi = pi2 * rand2;
+
+		// 利用法线构建坐标系
+		vec3 b1, b2;
+		build_basis(normalo, b1, b2);
+
+		// 获取投影前点的位置
+		vec3 positioni_0 = positiono + b1 * r * cos(phi) + b2 * r * sin(phi);
+
+		// 进行投影
+		hit_record rec1, rec2;
+		bool hit1 = world->hit(ray(positioni_0, normalo), 0.000001, infinity, rec1);
+		bool hit2 = world->hit(ray(positioni_0, -normalo), 0.000001, infinity, rec2);
+		vec3 positioni, normali;
+		if (hit1) {
+			if (hit2) {
+				if (rec1.t < rec2.t) {
+					positioni = rec1.p;
+					normali = rec1.normal;
+				}
+				else {
+					positioni = rec2.p;
+					normali = rec2.normal;
+				}
+			}
+			else {
+				positioni = rec1.p;
+				normali = rec1.normal;
+			}
+		}
+		else {
+			if (hit2) {
+				positioni = rec2.p;
+				normali = rec2.normal;
+			}
+			else {
+				positioni = positioni_0;
+				normali = normalo;
+			}
+		}
+
+		// 计算pdf
+		double pdf = exp(-r * r * v_inv * 0.5) * v_inv * pi2_inv / (1 - exp(-Rm2 * v_inv * 0.5)) * abs(dot(normali, normalo));
+
+		return make_tuple(pdf, normali, positioni);
 	}
 
 	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
 		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const override {
 
-		return vec3();
+		// 出射折射菲涅尔项
+		double F_value_o = F0 + (1.0 - F0) * pow(1 -std::max(dot(wo, normalo), 0.0), 5);
+		vec3 F_o(1 - F_value_o, 1 - F_value_o, 1 - F_value_o);
+
+		// 入射折射菲涅尔项
+		double F_value_i = F0 + (1.0 - F0) * pow(1 - std::max(dot(wi, normali), 0.0), 5);
+		vec3 F_i(1 - F_value_i, 1 - F_value_i, 1 - F_value_i);
+
+		// Rd项
+		// 这里使用的是二维高斯分布
+		double r2 = (positiono - positioni).length_squared();
+		double Rd = exp(-r2 * v_inv * 0.5) * v_inv * pi2_inv;
+
+		//return pi_inv * Rd * F_o * F_i * color_map_ptr->get_value(uv);
+		return pi_inv * Rd * color_map_ptr->get_value(uv);
 	}
 
 	virtual vec3 get_radiance() const override {

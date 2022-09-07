@@ -39,7 +39,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 2;
+	const int samples_per_pixel = 4;
 	const int max_depth = 5;
 
 	// 打开图像文件
@@ -84,6 +84,10 @@ int main()
 	vec3 light_vertex_2 = vec3(1, 1.999, -6.25);
 	vec3 light_vertex_3 = vec3(1, 1.999, -5.75);
 	vec3 light_vertex_4 = vec3(-1, 1.999, -5.75);
+	//vec3 light_vertex_1 = vec3(-1, 1.999, -7);
+	//vec3 light_vertex_2 = vec3(1, 1.999, -7);
+	//vec3 light_vertex_3 = vec3(1, 1.999, -5);
+	//vec3 light_vertex_4 = vec3(-1, 1.999, -5);
 
 	// 三角形实例
 	auto box_material = white;
@@ -109,19 +113,25 @@ int main()
 	//world.add(make_shared<sphere>(point3(0.8, -1.2, -5.2), 0.79, aluminum));
 	shared_ptr<texture> tex_sphere = make_shared<simple_color_texture>(vec3(1, 1, 0.1));
 	shared_ptr<material> mat_sphere = make_shared<ggx_nonmetal_material>(0.02, 0.08, tex_sphere);
-	world.add(make_shared<sphere>(point3(-1.3, 0.2, -7.3), 0.7, mat_sphere));
+	//world.add(make_shared<sphere>(point3(-1.3, 0.2, -7.3), 0.7, mat_sphere));
 
+	shared_ptr<texture> tex_sss = make_shared<simple_color_texture>(0, 100, 0);
+	//shared_ptr<material> mat_sss = make_shared<sss_material>(0.058, tex_sss);
+	shared_ptr<material> mat_sss = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_sss);
+	//world.add(make_shared<sphere>(point3(0, -1, -6.5), 1, mat_sss));
+	//world.add(make_shared<sphere>(point3(0, 0, -6), 1.5, mat_sss));
+	
 	// cornell box
-	world.add(make_shared<triangle>(tri1));
-	world.add(make_shared<triangle>(tri2));
-	world.add(make_shared<triangle>(tri3));
-	world.add(make_shared<triangle>(tri4));
-	world.add(make_shared<triangle>(tri5));
-	world.add(make_shared<triangle>(tri6));
-	world.add(make_shared<triangle>(tri7));
-	world.add(make_shared<triangle>(tri8));
-	world.add(make_shared<triangle>(tri9));
-	world.add(make_shared<triangle>(tri10));
+	//world.add(make_shared<triangle>(tri1));
+	//world.add(make_shared<triangle>(tri2));
+	//world.add(make_shared<triangle>(tri3));
+	//world.add(make_shared<triangle>(tri4));
+	//world.add(make_shared<triangle>(tri5));
+	//world.add(make_shared<triangle>(tri6));
+	//world.add(make_shared<triangle>(tri7));
+	//world.add(make_shared<triangle>(tri8));
+	//world.add(make_shared<triangle>(tri9));
+	//world.add(make_shared<triangle>(tri10));
 	//world.add(make_shared<triangle>(tri11));
 	//world.add(make_shared<triangle>(tri12));
 	world.add(make_shared<triangle>(tri13));
@@ -131,12 +141,12 @@ int main()
 	shared_ptr<texture> tex_cow = make_shared<color_map>("obj/spot_texture.png");
 	shared_ptr<texture> tex_cube = make_shared<color_map>("obj/honey_d.jpg");
 	shared_ptr<texture> tex_cube_n = make_shared<normal_map>("obj/honey_n.jpg");
-	shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(vec3(1, 1, 1));
+	shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(0, 100, 0);
 	//shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(vec3(1, 0.782, 0.344));
 	
 	shared_ptr<material> mat_cow = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_cow);
 	shared_ptr<material> mat_cube = make_shared<ggx_metal_material>(0.1, tex_cube, vec3(0, 0, 0), tex_cube_n);
-	shared_ptr<material> mat_bunny = make_shared<ggx_nonmetal_material>(0.1, 0.08, tex_bunny);
+	shared_ptr<material> mat_bunny = make_shared<sss_material>(0.058, tex_bunny);
 
 	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
@@ -145,7 +155,7 @@ int main()
 	material_dict[string("mat_cube")] = mat_cube;
 	material_dict[string("mat_bunny")] = mat_bunny;
 
-	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test.obj", material_dict, mat_default);
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_sss.obj", material_dict, mat_default);
 	world.add(mesh);
 
 
