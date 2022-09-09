@@ -399,7 +399,8 @@ public:
 };
 
 
-#define V 1
+// 次表面散射材质
+constexpr double V = 0.1;
 class sss_material : public material {
 public:
 	vec3 radiance; // 自发光强度
@@ -538,4 +539,54 @@ public:
 	}
 };
 
+
+// 玻璃材质
+class ggx_translucent_material : public material {
+public:
+	double n; // 材质折射率
+	double F0; // 菲涅尔项
+	vec3 radiance; // 自发光强度
+	shared_ptr<texture> color_map_ptr = nullptr;
+	shared_ptr<texture> normal_map_ptr = nullptr;
+
+public:
+	// 使用高光参数和color_map来构造材质
+	ggx_translucent_material(double n_init, double F0_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr) {
+		n = n_init;
+		F0 = F0_init;
+		radiance = radiance_init;
+		color_map_ptr = color_map_ptr_init;
+		normal_map_ptr = normal_map_ptr_init;
+	}
+
+	virtual tuple<double, vec3> sample_wi(const vec3 &wo, const vec3 &normali) const {
+
+		return make_tuple(0, vec3());
+
+	}
+
+	virtual tuple<double, vec3, vec3>
+		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const {
+
+		return make_tuple(1, normalo, positiono);
+	}
+
+	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, const vec3 &uv,
+		const vec3 &wi, const vec3 &normali, const vec3 &positioni) const override {
+
+		return vec3();
+	}
+
+	virtual vec3 get_radiance() const override {
+		return radiance;
+	}
+
+	virtual shared_ptr<texture> get_normal_map_ptr() const override {
+		return normal_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_color_map_ptr() const override {
+		return color_map_ptr;
+	}
+};
 #endif

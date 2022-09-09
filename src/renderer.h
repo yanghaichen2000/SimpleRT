@@ -85,7 +85,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 					double distance_light_square = (position_light - positioni).length_squared(); // shading point到光源采样点距离的平方
 					
 					vec3 brdf_light = rec.mat_ptr->bsdf(wo, normalo, positiono, rec.uv, wi_light, normali, positioni); // 计算到光源的bsdf
-					vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light) / pdf_p; // 直接光
+					vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光
 					radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
 				}
 			}
