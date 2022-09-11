@@ -38,7 +38,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 		// 随机决定是穿透还是不穿透，概率取决于透明度
 		if (random_double() > alpha) { // 穿透
 			// 直接生成一束光线继续向前传播
-			ray new_ray(rec.p + r.dir * 0.00001, r.dir);
+			ray new_ray(rec.p + r.dir * 0.00001, r.dir, r.med);
 			// 传入新函数的depth值不会减少
 			if (random_double() > 0.9)
 				return ray_color(new_ray, bvh_root, depth - 1, light_ptr_list);
@@ -84,7 +84,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 				{
 					double distance_light_square = (position_light - positioni).length_squared(); // shading point到光源采样点距离的平方
 					
-					vec3 brdf_light = rec.mat_ptr->bsdf(wo, normalo, positiono, rec.uv, wi_light, normali, positioni); // 计算到光源的bsdf
+					vec3 brdf_light = rec.mat_ptr->bsdf(wo, normalo, positiono, true, rec.uv, wi_light, normali, positioni, true); // 计算到光源的bsdf
 					vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光
 					radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
 				}
@@ -100,9 +100,12 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 				double pdf_p; // 入射点位置采样点概率密度
 				vec3 normali; // 入射点法线
 				vec3 positioni; // 入射点坐标
+				bool wo_front = rec.front_face;
+				bool wi_front;
 				tie(pdf_p, normali, positioni) = rec.mat_ptr->sample_positioni(normalo, positiono, bvh_root); // 获取入射点采样pdf，入射点法线，入射方向
-				tie(pdf_w, wi) = rec.mat_ptr->sample_wi(wo, normali);
-				vec3 brdf = rec.mat_ptr->bsdf(wo, normalo, positiono, rec.uv, wi, normali, positioni);
+				tie(pdf_w, wi, wi_front) = rec.mat_ptr->sample_wi(wo, normali, wo_front);
+				vec3 brdf = rec.mat_ptr->bsdf(wo, normalo, positiono, wo_front, rec.uv, wi, normali, positioni, wi_front);
+				
 				ray new_ray(positioni + wi * 0.0001, wi); // 新的光线从入射点射出
 				vec3 radiance_indirect = ray_color(new_ray, bvh_root, depth - 1, light_ptr_list) * brdf * dot(normalo, wi) / (pdf_w * pdf_p * P_RR);
 				radiance_indirect = clamp(radiance_indirect, 0, std::numeric_limits<double>::infinity());

@@ -25,10 +25,11 @@ using std::cout;
 // 11. bssrdf
 // 12. btdf
 // 13. 体积
-// 14. 透明材质						完成（正确性需要确认）
+// 14. alpha						完成（正确性需要确认）
 // 15. 降噪
 // 16. ggx非金属材质					完成
 // 17. 混合材质
+// 18. ggx透明材质
 
 
 #define do_render
@@ -96,10 +97,10 @@ int main()
 	triangle tri2(vertex_1, vertex_4, vertex_3, box_material);
 	triangle tri3(vertex_5, vertex_2, vertex_6, box_material);
 	triangle tri4(vertex_1, vertex_2, vertex_5, box_material);
-	triangle tri5(vertex_1, vertex_8, vertex_4, box_material); // greenn
-	triangle tri6(vertex_1, vertex_5, vertex_8, box_material); // green
-	triangle tri7(vertex_2, vertex_3, vertex_7, box_material); // red 
-	triangle tri8(vertex_2, vertex_6, vertex_7, box_material); // red
+	triangle tri5(vertex_1, vertex_8, vertex_4, green); // green
+	triangle tri6(vertex_1, vertex_5, vertex_8, green); // green
+	triangle tri7(vertex_2, vertex_3, vertex_7, red); // red 
+	triangle tri8(vertex_2, vertex_6, vertex_7, red); // red
 	triangle tri9(vertex_5, vertex_6, vertex_8, box_material);
 	triangle tri10(vertex_6, vertex_7, vertex_8, box_material);
 	triangle tri11(vertex_8, vertex_7, vertex_4, box_material);
@@ -110,17 +111,18 @@ int main()
 
 	// 设置world
 
-	// 球
-	//world.add(make_shared<sphere>(point3(0.8, -1.2, -5.2), 0.79, aluminum));
+	// sphere
+	shared_ptr<medium> med_glass = make_shared<medium>(1.45);
 	shared_ptr<texture> tex_sphere = make_shared<simple_color_texture>(vec3(1, 1, 0.1));
-	shared_ptr<material> mat_sphere = make_shared<ggx_nonmetal_material>(0.02, 0.08, tex_sphere);
-	//world.add(make_shared<sphere>(point3(-1.3, 0.2, -7.3), 0.7, mat_sphere));
+	shared_ptr<material> mat_sphere = make_shared<ggx_translucent_material>(0.02, 0.08, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
+	world.add(make_shared<sphere>(point3(1.3, 0.2, -7.3), 0.7, mat_sphere));
 
-	shared_ptr<texture> tex_sss = make_shared<simple_color_texture>(0, 180, 0);
+	//shared_ptr<texture> tex_sss = make_shared<simple_color_texture>(0, 180, 0);
 	//shared_ptr<material> mat_sss = make_shared<sss_material>(0.058, tex_sss);
-	shared_ptr<material> mat_sss = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_sss);
+	//shared_ptr<material> mat_sss = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_sss);
+
 	//world.add(make_shared<sphere>(point3(0, -1, -6.5), 1, mat_sss));
-	//world.add(make_shared<sphere>(point3(0, 0, -6), 1.5, mat_sss));
+	//world.add(make_shared<sphere>(point3(0, 0, -6), 1.5, mat_sphere));
 	
 	// cornell box
 	world.add(make_shared<triangle>(tri1));
@@ -142,13 +144,13 @@ int main()
 	shared_ptr<texture> tex_cow = make_shared<color_map>("obj/spot_texture.png");
 	shared_ptr<texture> tex_cube = make_shared<color_map>("obj/honey_d.jpg");
 	shared_ptr<texture> tex_cube_n = make_shared<normal_map>("obj/honey_n.jpg");
-	shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(0, 180, 0);
+	shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(255, 255, 255);
 	//shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(vec3(1, 0.782, 0.344));
 	
 	shared_ptr<material> mat_cow = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_cow);
 	shared_ptr<material> mat_cube = make_shared<ggx_metal_material>(0.1, tex_cube, vec3(0, 0, 0), tex_cube_n);
-	shared_ptr<material> mat_bunny = make_shared<sss_material>(0.058, tex_bunny);
-	//shared_ptr<material> mat_bunny = make_shared<ggx_nonmetal_material>(0.05, 0, tex_bunny);
+	//shared_ptr<material> mat_bunny = make_shared<sss_material>(0.058, tex_bunny);
+	shared_ptr<material> mat_bunny = make_shared<ggx_nonmetal_material>(0.05, 0, tex_bunny);
 
 	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
