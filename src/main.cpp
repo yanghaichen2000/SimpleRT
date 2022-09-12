@@ -14,7 +14,7 @@ using std::cout;
 // 特性列表
 // 1.  图像纹理						完成
 // 2.  法线贴图（预计算切线）			完成	
-// 3.  
+// 3.  ggx透明材质
 // 4.  环境光照
 // 5.  meshtriangle类				完成
 // 6.  基础obj加载					完成
@@ -29,7 +29,7 @@ using std::cout;
 // 15. 降噪
 // 16. ggx非金属材质					完成
 // 17. 混合材质
-// 18. ggx透明材质
+// 18. 
 
 
 #define do_render
@@ -39,10 +39,10 @@ int main()
 #ifdef do_render
 	// 初始化
 	const double aspect_ratio = 1; // 16.0 / 9.0
-	const int image_width = 1024; //800
+	const int image_width = 512; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 4;
-	const int max_depth = 5;
+	const int samples_per_pixel = 512;
+	const int max_depth = 6;
 
 	// 打开图像文件
 	std::fstream file;
@@ -114,8 +114,10 @@ int main()
 	// sphere
 	shared_ptr<medium> med_glass = make_shared<medium>(1.45);
 	shared_ptr<texture> tex_sphere = make_shared<simple_color_texture>(vec3(1, 1, 0.1));
-	shared_ptr<material> mat_sphere = make_shared<ggx_translucent_material>(0.02, 0.08, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
-	world.add(make_shared<sphere>(point3(1.3, 0.2, -7.3), 0.7, mat_sphere));
+	//shared_ptr<material> mat_sphere = make_shared<ggx_translucent_material>(0.02, 0.08, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
+	//shared_ptr<material> mat_sphere = make_shared<ggx_translucent_material>(0.02, 0.08, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, nullptr);
+	shared_ptr<material> mat_sphere = make_shared<translucent_material>(0.05, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
+	world.add(make_shared<sphere>(point3(0.6, -1, -5.6), 1, mat_sphere));
 
 	//shared_ptr<texture> tex_sss = make_shared<simple_color_texture>(0, 180, 0);
 	//shared_ptr<material> mat_sss = make_shared<sss_material>(0.058, tex_sss);
@@ -160,6 +162,7 @@ int main()
 	material_dict[string("mat_bunny")] = mat_bunny;
 
 	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_sss.obj", material_dict, mat_default);
+	mesh->set_translate(vec3(-0.3, 0, -1.5));
 	world.add(mesh);
 
 
@@ -197,6 +200,7 @@ int main()
 
 
 	// 开始渲染
+	
 	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 0);
 	thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 1);
 	thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 2);
@@ -210,7 +214,10 @@ int main()
 	t4.join();
 	t5.join();
 	t6.join();
-
+	/*
+	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
+	t1.join();
+	*/
 
 	// 将颜色从framebuffer写入ppm文件中
 	std::cout << "\nrender finish" << std::endl;
@@ -235,6 +242,6 @@ int main()
 	
 #endif
 
-	char a;
-	std::cin >> a;
+	//char a;
+	//std::cin >> a;
 }
