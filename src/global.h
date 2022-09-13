@@ -62,5 +62,6 @@ inline double clamp(double x, double min, double max) {
 
 // Test
 //#define test_mode
+bool sample_light_flag;
 
 #endif

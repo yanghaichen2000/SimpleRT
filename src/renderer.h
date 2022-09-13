@@ -19,6 +19,7 @@ using std::mutex;
 const double P_RR = 1; // 俄罗斯轮盘赌概率
 
 
+
 // 光线追踪函数
 // 深度表示剩余可反弹次数
 // 增加对光源采样功能
@@ -85,6 +86,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 						double distance_light_square = (position_light - positioni).length_squared(); // shading point到光源采样点距离的平方
 						bool wo_front = rec.front_face;
 						bool wi_front = dot(normali, wi_light) > 0 ? wo_front : not wo_front;
+						sample_light_flag = true;
 						vec3 brdf_light = rec.mat_ptr->bsdf(wo, normalo, positiono, wo_front, rec.uv, wi_light, normali, positioni, wi_front); // 计算到光源的bsdf
 						vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光
 						radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
@@ -109,6 +111,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 #ifdef test_mode
 				std::cout << "depth = " << depth << '\n';
 #endif
+				sample_light_flag = false;
 				vec3 brdf = rec.mat_ptr->bsdf(wo, normalo, positiono, wo_front, rec.uv, wi, normali, positioni, wi_front);
 				
 				ray new_ray(positioni + wi * 0.0001, wi); // 新的光线从入射点射出
