@@ -76,20 +76,29 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 					ray ray_to_light(positioni, wi_light);
 					hit_record rec_check_block;
 
+					bool wo_front = rec.front_face;
+					bool wi_front = dot(normali, wi_light) > 0 ? wo_front : not wo_front;
+
 					if (bvh_root->hit(ray_to_light, 0.000001, infinity, rec_check_block) and rec_check_block.t < (position_light - positioni).length())
 					{
 						radiance_direct += vec3(0, 0, 0); // 有遮挡物则直接光为0
 						include_direct_light = true;
+						
 					}
 					else
 					{
 						double distance_light_square = (position_light - positioni).length_squared(); // shading point到光源采样点距离的平方
-						bool wo_front = rec.front_face;
-						bool wi_front = dot(normali, wi_light) > 0 ? wo_front : not wo_front;
 						sample_light_flag = true;
 						vec3 brdf_light = rec.mat_ptr->bsdf(wo, normalo, positiono, wo_front, rec.uv, wi_light, normali, positioni, wi_front); // 计算到光源的bsdf
-						vec3 radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光
+						vec3 radiance_direct_delta;
+						if (wi_front == wo_front) {
+							radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光（反射）
+						}
+						else {
+							radiance_direct_delta = - radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光（折射）
+						}
 						radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
+
 					}
 				}
 			}

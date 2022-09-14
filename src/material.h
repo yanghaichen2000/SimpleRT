@@ -41,6 +41,9 @@ public:
 
 	// 是否需要对光源采样
 	virtual bool sample_light() const = 0;
+
+	// 获取材质编号
+	virtual int get_material_number() const = 0;
 };
 
 
@@ -196,6 +199,10 @@ public:
 	virtual bool sample_light() const override {
 		return true;
 	}
+
+	virtual int get_material_number() const override {
+		return 0;
+	}
 };
 
 
@@ -316,6 +323,10 @@ public:
 
 	virtual bool sample_light() const override {
 		return true;
+	}
+
+	virtual int get_material_number() const override {
+		return 1;
 	}
 };
 
@@ -465,6 +476,10 @@ public:
 
 	virtual bool sample_light() const override {
 		return true;
+	}
+
+	virtual int get_material_number() const override {
+		return 2;
 	}
 };
 
@@ -625,6 +640,10 @@ public:
 
 	virtual bool sample_light() const override {
 		return true;
+	}
+
+	virtual int get_material_number() const override {
+		return 3;
 	}
 };
 
@@ -827,6 +846,10 @@ public:
 	virtual bool sample_light() const override {
 		return true;
 	}
+
+	virtual int get_material_number() const override {
+		return 4;
+	}
 };
 
 
@@ -834,7 +857,7 @@ public:
 class translucent_material : public material {
 public:
 	double F0; // 菲涅尔项
-	double m = 4; // 高光项系数，用于调整bsdf的能量聚集度
+	double m = 200; // 高光项系数，用于调整bsdf的能量聚集度
 	vec3 radiance; // 自发光强度
 	shared_ptr<medium> medium_outside_ptr = default_medium_ptr;
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
@@ -911,9 +934,6 @@ public:
 			return vec3(bsdf_value, bsdf_value, bsdf_value);
 		} 
 		else { // 如果wi和wo不同侧，则根据折射计算
-			if (sample_light_flag) {
-				std::cout << "entered" << '\n';
-			}
 			double n_i = wi_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
 			double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
 			double sin_theta_o = n_i / n_o * sqrt(1 - pow(dot(wi, normali), 2));
@@ -926,11 +946,17 @@ public:
 			wo_re = tan_vec * sin(theta_o) + normali * cos(theta_o);
 			vec3 wi_re = -tan_vec * sin(theta_o) + normali * cos(theta_o);
 
-			//double bsdf_value = (m + 1) * pi2_inv * pow(dot(wo, wo_re), m);
 			double bsdf_value = (m + 1) * pi2_inv * pow(dot(normali, unit_vector(wi_re + wo)), m);
-			if (sample_light_flag) {
-				std::cout << bsdf_value << '\n';
+
+			// 计算能量补偿项（因为入射光和折射光方向取值范围不同）
+			double arcsin_max = std::min(n_i / n_o, n_o / n_i);
+			if (n_o < n_i) {
+				bsdf_value /= 1 - sqrt(1 - pow(arcsin_max, 2));
 			}
+			else {
+				bsdf_value *= 1 - sqrt(1 - pow(arcsin_max, 2));
+			}
+
 			return vec3(bsdf_value, bsdf_value, bsdf_value);
 		}
 	}
@@ -956,9 +982,24 @@ public:
 	};
 
 	virtual bool sample_light() const override {
-		return false;
+		return true;
+	}
+
+	virtual int get_material_number() const override {
+		return 5;
 	}
 };
+
+
+template <typename material_name>
+constexpr int get_material_number() {
+	if (std::is_same_v<material_name, phong_material>) return 0;
+	if (std::is_same_v<material_name, ggx_metal_material>) return 1;
+	if (std::is_same_v<material_name, ggx_nonmetal_material>) return 2;
+	if (std::is_same_v<material_name, sss_material>) return 3;
+	if (std::is_same_v<material_name, ggx_translucent_material>) return 4;
+	if (std::is_same_v<material_name, translucent_material>) return 5;
+}
 
 
 #endif
