@@ -651,8 +651,8 @@ public:
 // ggx玻璃材质
 class ggx_translucent_material : public material {
 public:
-	double F0; // 菲涅尔项
-	double a; // 粗糙度
+	double a = 0.001; // 表面粗糙度
+	double m = 200; // 高光项系数，用于调整bsdf的能量聚集度
 	vec3 radiance; // 自发光强度
 	shared_ptr<medium> medium_outside_ptr = default_medium_ptr;
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
@@ -660,11 +660,10 @@ public:
 	shared_ptr<texture> normal_map_ptr = nullptr;
 
 public:
-	
-	ggx_translucent_material(double a_init, double F0_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
+
+	ggx_translucent_material(double a_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
 		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
 		a = a_init;
-		F0 = F0_init;
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
 		normal_map_ptr = normal_map_ptr_init;
@@ -672,154 +671,129 @@ public:
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
 	}
 
-	virtual tuple<double, vec3, bool> sample_wi(const vec3 &wo, const vec3 &normali, bool wo_front) const override {
+	virtual tuple<double, vec3, bool> sample_wi(const vec3& wo, const vec3& normali, bool wo_front) const override {
 		vec3 wi;
-		double pdf;
-
-		// 先采样法线
-		// 重要性采样微表面法线，使用的分布为ggx NDF
-		double rand1, rand2, theta, phi;
-		vec3 h;
-
-		rand1 = random_double();
-		rand2 = random_double();
-		theta = atan(a * sqrt(rand1 / (1 - rand1))); // 微观法线与宏观法线的夹角
-		phi = pi2 * rand2; // 微观法线在切平面的角度
-
-		// 利用法线构建坐标系
-		vec3 b1, b2;
-		build_basis(normali, b1, b2);
-
-		// 得到微观法线(即wi和wo的半程向量)
-		h = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta); // 弄错了一次，注意。
 
 		// 计算菲涅尔加权系数
-		double F_value = F0 + (1.0 - F0) * pow(1 - dot(wo, h), 5);
-
-		if (random_double() < F_value) {
-
-			// 根据镜面反射计算wi
-			wi = 2 * h * dot(wo, h) - wo;
-
-			// 如果光线穿透，返回一个很大的pdf使该结果无贡献
-			if (dot(wi, normali) < 0) {
-				pdf = 1000000;
-			}
-			else {
-				// pdf由NDF推出
-				double a2 = a * a;
-				pdf = a2 * cos(theta) * pi_inv / pow(pow(cos(theta), 2) * (a2 - 1) + 1, 2) * 0.25 / dot(wo, h);
-			}
-
-			pdf = 999999999; // test
-
-			return make_tuple(pdf * F_value, wi, wo_front);
+		//double F_value = F0 + (1.0 - F0) * pow(1 - dot(wo, normali), 5);
+		double F_value;
+		double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
+		double n_i = wo_front ? get_medium_inside_ptr()->n : get_medium_outside_ptr()->n;
+		double cos_theta_o = dot(wo, normali);
+		double cos_theta_i_2 = 1 - pow(n_o / n_i, 2) * (1 - pow(cos_theta_o, 2));
+		if (cos_theta_i_2 < 0) {
+			F_value = 1;
 		}
 		else {
+			double cos_theta_i = sqrt(cos_theta_i_2);
+			double Rs_value_1 = n_o * cos_theta_o;
+			double Rs_value_2 = n_i * cos_theta_i;
+			double Rs = pow((Rs_value_1 - Rs_value_2) / (Rs_value_1 + Rs_value_2), 2);
+			double Rp_value_1 = n_o * cos_theta_i;
+			double Rp_value_2 = n_i * cos_theta_o;
+			double Rp = pow((Rp_value_1 - Rp_value_2) / (Rp_value_1 + Rp_value_2), 2);
+			F_value = 0.5 * (Rs + Rp);
+		}
 
+		if (random_double() < F_value) { //TODO
+
+			// 根据镜面反射计算wi
+			wi = 2 * normali * dot(wo, normali) - wo;
+
+			double pdf = (m + 1) * pi2_inv * dot(wi, normali);
+			return make_tuple(pdf, wi, wo_front);
+		}
+		else {
 			// 根据折射计算wi
 
-			// 获取折射率，两侧分别为内侧和外侧
-			double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
-			double n_i = wo_front ? get_medium_inside_ptr()->n : get_medium_outside_ptr()->n;
-
 			// 获得折射角sin值
-			double sin_theta_i = n_o / n_i * sqrt(1 - pow(dot(wo, h), 2));
+			double sin_theta_i = sqrt(1 - cos_theta_i_2);
 			// 处理不存在折射光的情况
-			if (sin_theta_i > 1 or sin_theta_i < -1) {
-				return make_tuple(10000000, h, wo_front);
+			if (sin_theta_i > 1) {
+				//return make_tuple(10000000, normali, wo_front);
+				// 根据镜面反射计算wi
+				wi = 2 * normali * dot(wo, normali) - wo;
+
+				double pdf = (m + 1) * pi2_inv * dot(wi, normali);
+				return make_tuple(pdf, wi, wo_front);
 			}
 			// 计算折射角
 			double theta_i = asin(sin_theta_i);
 
 			// 切向单位向量（用于表示入射方向，注意与uv的切向含义不同）
-			vec3 tan_vec = -unit_vector(wo - dot(wo, h) * h);
+			vec3 tan_vec = -unit_vector(wo - dot(wo, normali) * normali);
 			// 计算出射方向
-			vec3 wi = unit_vector(tan_vec * sin_theta_i - h * cos(theta_i));
+			vec3 wi = unit_vector(tan_vec * sin_theta_i - normali * cos(theta_i));
 
-			// pdf由NDF推出
-			double a2 = a * a;
-			pdf = a2 * cos(theta) * pi_inv / pow(pow(cos(theta), 2) * (a2 - 1) + 1, 2) * 0.25 / dot(wo, h);
-
-#ifdef test_mode
-			std::cout << "\nsample_wi()" << '\n';
-			std::cout << "F_value = " << F_value << '\n';
-			std::cout << acos(dot(h, normali)) * pi2_inv * 360.0 << '\n';
-			std::cout << acos(dot(wo, normali)) * pi2_inv * 360.0 << ' ' << theta_i * pi2_inv * 360.0 << '\n';
-			std::cout << n_o << ' ' << n_i << '\n';
-			std::cout << "pdf = " << pdf << '\n';
-#endif
-			return make_tuple(pdf * (1 - F_value), wi, not wo_front);
+			double pdf = (m + 1) * pi2_inv * dot(wi, normali);
+			return make_tuple(pdf, wi, not wo_front);
 		}
-
 	}
 
 	virtual tuple<double, vec3, vec3>
-		sample_positioni(const vec3 &normalo, const vec3 &positiono, shared_ptr<hittable> world) const override {
+		sample_positioni(const vec3& normalo, const vec3& positiono, shared_ptr<hittable> world) const override {
 
 		return make_tuple(1, normalo, positiono);
 	}
 
-	virtual vec3 bsdf(const vec3 &wo, const vec3 &normalo, const vec3 &positiono, bool wo_front, const vec3 &uv,
-		const vec3 &wi, const vec3 &normali, const vec3 &positioni, bool wi_front) const override {
+	virtual vec3 bsdf(const vec3& wo, const vec3& normalo, const vec3& positiono, bool wo_front, const vec3& uv,
+		const vec3& wi, const vec3& normali, const vec3& positioni, bool wi_front) const override {
 
-		// 如果入射角出射角位于同一侧，根据反射计算bsdf
-		if (wo_front == wi_front) {
+
+		if (wi_front == wo_front) { // 如果wi和wo同侧，则根据反射计算
 			
-			// ggx模型
-			
-			// F 菲涅尔项
-			// 对于非金属，菲涅尔项的RGB值相等
-			vec3 h = unit_vector(wi + wo);
-			double F_value = F0 + (1.0 - F0) * pow(1 - dot(wo, h), 5);
-			vec3 F(F_value, F_value, F_value);
+			// 此时菲涅尔项为1
 			// D NDF项
 			double a2 = a * a;
+			vec3 h = unit_vector(wo + wi);
 			double D = a2 / (pi * pow(pow(dot(normalo, h), 2) * (a2 - 1) + 1, 2));
+
 			// G 几何项（考虑遮挡）
 			double dot_n_v = dot(normalo, wo);
 			double dot_n_l = dot(normalo, wi);
 			double k = a * 0.5;
 			double G = dot_n_v / (dot_n_v * (1 - k) + k) * dot_n_l / (dot_n_l * (1 - k) + k);
-
-			vec3 ans = F * D * G / (4 * dot_n_v * dot_n_l);
-			return clamp(ans, 0, infinity);
+			double bsdf_value = 0.0001 * D * G / (4 * dot_n_v * dot_n_l);
+			return vec3(bsdf_value, bsdf_value, bsdf_value);
 		}
-		else // 入射角出射角不同侧，根据折射计算bsdf
-		{
-			// 计算法线方向
-			double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
+		else { // 如果wi和wo不同侧，则根据折射计算
+			// 先根据wi恢复出wo
+			vec3 wo_re;
+
 			double n_i = wi_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
-			double theta_o = acos(abs(dot(wo, normalo)));
-			double theta_i = acos(abs(dot(wi, normalo)));
-			double theta_h = atan((n_o * sin(theta_o) - n_i * sin(theta_i)) / (n_i * cos(theta_i) - n_o * cos(theta_o)));
+			double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
+			double sin_theta_o = n_i / n_o * sqrt(1 - pow(dot(wi, normali), 2));
 
-			// ggx模型
+			if (sin_theta_o > 1) {
+				return vec3(0, 0, 0); // 如果不存在折射，bsdf为0
+			}
+			double theta_o = asin(sin_theta_o);
+			vec3 tan_vec = -unit_vector(wi - dot(normali, wi) * normali);
+			wo_re = tan_vec * sin(theta_o) + normali * cos(theta_o);
+			vec3 wi_re = -tan_vec * sin(theta_o) + normali * cos(theta_o);
 
-			// F 菲涅尔项
-			// 对于非金属，菲涅尔项的RGB值相等
-			double F_value = F0 + (1.0 - F0) * pow(1 - cos(theta_o + theta_h), 5);
-			vec3 F(1 - F_value, 1 - F_value, 1 - F_value);
+			// 计算bsdf
 			// D NDF项
 			double a2 = a * a;
-			double D = a2 / (pi * pow(pow(cos(theta_h), 2) * (a2 - 1) + 1, 2));
-			// G 几何项
-			double dot_n_v = abs(dot(normalo, wo));
-			double dot_n_l = abs(dot(normalo, wi));
+			vec3 h = unit_vector(wo + wi_re);
+			double D = a2 / (pi * pow(pow(dot(normalo, h), 2) * (a2 - 1) + 1, 2));
+			// G 几何项（考虑遮挡）
+			double dot_n_v = dot(normalo, wo);
+			double dot_n_l = dot(normalo, wi_re);
 			double k = a * 0.5;
 			double G = dot_n_v / (dot_n_v * (1 - k) + k) * dot_n_l / (dot_n_l * (1 - k) + k);
+			double bsdf_value = 0.0001 * D * G / (4 * dot_n_v * dot_n_l);
 
-			vec3 ans = F * D * G / (4 * dot_n_v * dot_n_l);
+			// 计算能量补偿项（因为入射光和折射光方向取值范围不同）
+			double arcsin_max = std::min(n_i / n_o, n_o / n_i);
+			if (n_o < n_i) {
+				bsdf_value /= 1 - sqrt(1 - pow(arcsin_max, 2));
+			}
+			else {
+				bsdf_value *= 1 - sqrt(1 - pow(arcsin_max, 2));
+			}
 
-#ifdef test_mode
-			std::cout << "\n bsdf()" << '\n';
-			std::cout << theta_h * pi2_inv * 360.0 << '\n';
-			std::cout << (theta_o + theta_h) * pi2_inv * 360.0 << ' ' << (theta_i + theta_h) * pi2_inv * 360.0 << '\n';
-			std::cout << n_o << ' ' << n_i << '\n';
-			std::cout << "bsdf = " << ans << '\n';
-#endif
-
-			return clamp(ans, 0, infinity);
+			return vec3(bsdf_value, bsdf_value, bsdf_value);
 		}
 	}
 
@@ -848,7 +822,7 @@ public:
 	}
 
 	virtual int get_material_number() const override {
-		return 4;
+		return 5;
 	}
 };
 
@@ -856,8 +830,7 @@ public:
 // 玻璃材质
 class translucent_material : public material {
 public:
-	double F0; // 菲涅尔项
-	double m = 200; // 高光项系数，用于调整bsdf的能量聚集度
+	double m = 2000; // 高光项系数，用于调整bsdf的能量聚集度
 	vec3 radiance; // 自发光强度
 	shared_ptr<medium> medium_outside_ptr = default_medium_ptr;
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
@@ -866,9 +839,8 @@ public:
 
 public:
 
-	translucent_material(double F0_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
+	translucent_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
 		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
-		F0 = F0_init;
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
 		normal_map_ptr = normal_map_ptr_init;
@@ -880,7 +852,25 @@ public:
 		vec3 wi;
 		
 		// 计算菲涅尔加权系数
-		double F_value = F0 + (1.0 - F0) * pow(1 - dot(wo, normali), 5);
+		//double F_value = F0 + (1.0 - F0) * pow(1 - dot(wo, normali), 5);
+		double F_value;
+		double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
+		double n_i = wo_front ? get_medium_inside_ptr()->n : get_medium_outside_ptr()->n;
+		double cos_theta_o = dot(wo, normali);
+		double cos_theta_i_2 = 1 - pow(n_o / n_i, 2) * (1 - pow(cos_theta_o, 2));
+		if (cos_theta_i_2 < 0) {
+			F_value = 1;
+		}
+		else {
+			double cos_theta_i = sqrt(cos_theta_i_2);
+			double Rs_value_1 = n_o * cos_theta_o;
+			double Rs_value_2 = n_i * cos_theta_i;
+			double Rs = pow((Rs_value_1 - Rs_value_2) / (Rs_value_1 + Rs_value_2), 2);
+			double Rp_value_1 = n_o * cos_theta_i;
+			double Rp_value_2 = n_i * cos_theta_o;
+			double Rp = pow((Rp_value_1 - Rp_value_2) / (Rp_value_1 + Rp_value_2), 2);
+			F_value = 0.5 * (Rs + Rp);
+		}
 
 		if (random_double() < F_value) { //TODO
 
@@ -891,18 +881,18 @@ public:
 			return make_tuple(pdf, wi, wo_front);
 		}
 		else {
-
 			// 根据折射计算wi
 
-			// 获取折射率，两侧分别为内侧和外侧
-			double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
-			double n_i = wo_front ? get_medium_inside_ptr()->n : get_medium_outside_ptr()->n;
-
 			// 获得折射角sin值
-			double sin_theta_i = n_o / n_i * sqrt(1 - pow(dot(wo, normali), 2));
+			double sin_theta_i = sqrt(1 - cos_theta_i_2);
 			// 处理不存在折射光的情况
 			if (sin_theta_i > 1) {
-				return make_tuple(10000000, normali, wo_front);
+				//return make_tuple(10000000, normali, wo_front);
+				// 根据镜面反射计算wi
+				wi = 2 * normali * dot(wo, normali) - wo;
+
+				double pdf = (m + 1) * pi2_inv * dot(wi, normali);
+				return make_tuple(pdf, wi, wo_front);
 			}
 			// 计算折射角
 			double theta_i = asin(sin_theta_i);
@@ -926,14 +916,16 @@ public:
 	virtual vec3 bsdf(const vec3& wo, const vec3& normalo, const vec3& positiono, bool wo_front, const vec3& uv,
 		const vec3& wi, const vec3& normali, const vec3& positioni, bool wi_front) const override {
 
-		// 先根据wi恢复出wo
-		vec3 wo_re;
+		
 		if (wi_front == wo_front) { // 如果wi和wo同侧，则根据反射计算
 			//wo_re = (2.0 * dot(normali, wi) * normali - wo);
 			double bsdf_value = (m + 1) * pi2_inv * pow(dot(normali, unit_vector(wi + wo)), m);
 			return vec3(bsdf_value, bsdf_value, bsdf_value);
 		} 
 		else { // 如果wi和wo不同侧，则根据折射计算
+			// 先根据wi恢复出wo
+			vec3 wo_re;
+
 			double n_i = wi_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
 			double n_o = wo_front ? get_medium_outside_ptr()->n : get_medium_inside_ptr()->n;
 			double sin_theta_o = n_i / n_o * sqrt(1 - pow(dot(wi, normali), 2));

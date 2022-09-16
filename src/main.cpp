@@ -23,7 +23,7 @@ using std::cout;
 // 9.  ggx多次弹射补偿
 // 10. vec3替换为eigen::Vector3d
 // 11. bssrdf
-// 12. btdf
+// 12. 透明材质						完成
 // 13. 体积
 // 14. alpha						完成（正确性需要确认）
 // 15. 降噪
@@ -41,9 +41,9 @@ int main()
 #ifdef do_render
 	// 初始化
 	const double aspect_ratio = 1; // 16.0 / 9.0
-	const int image_width = 512; //800
+	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 32;
+	const int samples_per_pixel = 1024;
 	const int max_depth = 6;
 
 	// 打开图像文件
@@ -70,10 +70,7 @@ int main()
 	shared_ptr<material> green = make_shared<phong_material>(vec3(0, 0.8, 0), vec3(0, 0, 0));
 	shared_ptr<material> phong_2 = make_shared<phong_material>(vec3(1.0, 1.0, 1.0), vec3(0, 0, 0));
 	shared_ptr<material> white = make_shared<phong_material>(vec3(1, 1, 1), vec3(0, 0, 0));
-	shared_ptr<material> gold = make_shared<ggx_metal_material>(0.2);
 	shared_ptr<material> stone = make_shared<ggx_metal_material>(0.8, vec3(0.04, 0.04, 0.04));
-	shared_ptr<material> aluminum = make_shared<ggx_metal_material>(0.003, vec3(0.939, 0.914, 0.822));
-	shared_ptr<material> copper = make_shared<ggx_metal_material>(0.6, vec3(0.904, 0.372, 0.256));
 
 	// 场景顶点
 	vec3 vertex_1(-2, -2, -8);
@@ -114,12 +111,12 @@ int main()
 	// 设置world
 
 	// sphere
-	shared_ptr<medium> med_glass = make_shared<medium>(1.02);
+	shared_ptr<medium> med_glass = make_shared<medium>(1.5);
 	shared_ptr<texture> tex_sphere = make_shared<simple_color_texture>(vec3(1, 1, 0.1));
 	//shared_ptr<material> mat_sphere = make_shared<ggx_translucent_material>(0.02, 0.08, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
 	//shared_ptr<material> mat_sphere = make_shared<ggx_translucent_material>(0.02, 0.08, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, nullptr);
-	shared_ptr<material> mat_sphere = make_shared<translucent_material>(0.05, tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
-	world.add(make_shared<sphere>(point3(0.6, -1, -5.6), 1, mat_sphere));
+	shared_ptr<material> mat_sphere = make_shared<translucent_material>(tex_sphere, vec3(0, 0, 0), nullptr, nullptr, med_glass);
+	//world.add(make_shared<sphere>(point3(-0.6, -1, -5.6), 1, mat_sphere));
 
 	//shared_ptr<texture> tex_sss = make_shared<simple_color_texture>(0, 180, 0);
 	//shared_ptr<material> mat_sss = make_shared<sss_material>(0.058, tex_sss);
@@ -161,10 +158,10 @@ int main()
 	unordered_map<string, shared_ptr<material>> material_dict;
 	material_dict[string("mat_cow")] = mat_cow;
 	material_dict[string("mat_cube")] = mat_cube;
-	material_dict[string("mat_bunny")] = mat_bunny;
+	material_dict[string("mat_bunny")] = mat_sphere;
 
-	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_sss.obj", material_dict, mat_default);
-	mesh->set_translate(vec3(-0.3, 0, -1.5));
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test.obj", material_dict, mat_default);
+	//mesh->set_translate(vec3(-0.3, 0, -1.5));
 	world.add(mesh);
 
 
@@ -203,12 +200,14 @@ int main()
 
 	// 开始渲染
 	
-	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 0);
-	thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 1);
-	thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 2);
-	thread t4(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 3);
-	thread t5(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 4);
-	thread t6(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 6, 5);
+	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 0);
+	thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 1);
+	thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 2);
+	thread t4(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 3);
+	thread t5(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 4);
+	thread t6(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 5);
+	thread t7(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 6);
+	thread t8(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 7);
 
 	t1.join();
 	t2.join();
@@ -216,6 +215,8 @@ int main()
 	t4.join();
 	t5.join();
 	t6.join();
+	t7.join();
+	t8.join();
 	
 	//thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
 	//t1.join();

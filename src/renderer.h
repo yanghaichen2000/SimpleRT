@@ -13,11 +13,11 @@
 #include "camera.h"
 #include "material.h"
 #include "light.h"
+#include "material_samples.h"
 
 using std::mutex;
 
 const double P_RR = 1; // 俄罗斯轮盘赌概率
-
 
 
 // 光线追踪函数

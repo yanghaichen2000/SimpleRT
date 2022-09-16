@@ -72,6 +72,9 @@
     <ClInclude Include="src\medium.h">
       <Filter>源文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\material_samples.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">

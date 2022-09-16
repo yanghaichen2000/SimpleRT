@@ -159,6 +159,7 @@
     <ClInclude Include="src\hittable_list.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\material.h" />
+    <ClInclude Include="src\material_samples.h" />
     <ClInclude Include="src\medium.h" />
     <ClInclude Include="src\mesh_triangle.h" />
     <ClInclude Include="src\OBJ_Loader.h" />
