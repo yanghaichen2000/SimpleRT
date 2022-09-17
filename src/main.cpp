@@ -43,7 +43,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 1024;
+	const int samples_per_pixel = 4;
 	const int max_depth = 6;
 
 	// 打开图像文件
@@ -143,15 +143,21 @@ int main()
 
 	// obj
 	shared_ptr<texture> tex_cow = make_shared<color_map>("obj/spot_texture.png");
+	shared_ptr<material> mat_cow = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_cow);
+
 	shared_ptr<texture> tex_cube = make_shared<color_map>("obj/honey_d.jpg");
 	shared_ptr<texture> tex_cube_n = make_shared<normal_map>("obj/honey_n.jpg");
+	shared_ptr<material> mat_cube = make_shared<ggx_metal_material>(0.1, tex_cube, vec3(0, 0, 0), tex_cube_n);
+	
 	shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(255, 255, 255);
 	//shared_ptr<texture> tex_bunny = make_shared<simple_color_texture>(vec3(1, 0.782, 0.344));
-	
-	shared_ptr<material> mat_cow = make_shared<ggx_nonmetal_material>(0.05, 0.058, tex_cow);
-	shared_ptr<material> mat_cube = make_shared<ggx_metal_material>(0.1, tex_cube, vec3(0, 0, 0), tex_cube_n);
 	//shared_ptr<material> mat_bunny = make_shared<sss_material>(0.058, tex_bunny);
 	shared_ptr<material> mat_bunny = make_shared<ggx_nonmetal_material>(0.05, 0, tex_bunny);
+	
+	shared_ptr<texture> tex_plant = make_shared<color_map>("obj/plant_d.jpg");
+	shared_ptr<texture> tex_plant_n = make_shared<normal_map>("obj/plant_n_png.png");
+	shared_ptr<material> mat_plant_leaves = make_shared<ggx_nonmetal_material>(0.05, 0.05, tex_plant, vec3(0, 0, 0), tex_plant_n);
+	shared_ptr<material> mat_plant_pot_outside = make_shared<ggx_nonmetal_material>(0.1, 0.1, tex_plant, vec3(0, 0, 0), tex_plant_n);
 
 	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
@@ -159,8 +165,13 @@ int main()
 	material_dict[string("mat_cow")] = mat_cow;
 	material_dict[string("mat_cube")] = mat_cube;
 	material_dict[string("mat_bunny")] = mat_sphere;
+	material_dict[string("mat_horse")] = mat_sphere;
+	material_dict[string("mat_plant_ground")] = mat_plant_leaves;
+	material_dict[string("mat_plant_pot_outside")] = mat_plant_pot_outside;
+	material_dict[string("mat_plant_pot_inside")] = mat_plant_leaves;
+	material_dict[string("mat_plant_leaves")] = mat_plant_leaves;
 
-	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test.obj", material_dict, mat_default);
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_plant.obj", material_dict, mat_default);
 	//mesh->set_translate(vec3(-0.3, 0, -1.5));
 	world.add(mesh);
 
@@ -199,7 +210,7 @@ int main()
 
 
 	// 开始渲染
-	
+	/*
 	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 0);
 	thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 1);
 	thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 2);
@@ -208,7 +219,7 @@ int main()
 	thread t6(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 5);
 	thread t7(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 6);
 	thread t8(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 7);
-
+	
 	t1.join();
 	t2.join();
 	t3.join();
@@ -217,9 +228,10 @@ int main()
 	t6.join();
 	t7.join();
 	t8.join();
+	*/
 	
-	//thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
-	//t1.join();
+	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
+	t1.join();
 	
 
 	// 将颜色从framebuffer写入ppm文件中

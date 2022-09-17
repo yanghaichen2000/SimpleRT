@@ -119,6 +119,7 @@ public:
 
 	virtual vec3 get_value(const vec3 &uv) const override
 	{
+
 		// 预处理uv坐标，使其范围在[0,1)
 		vec3 real_uv = uv * scale;
 		real_uv[0] = real_uv[0] - std::floor(real_uv[0]);
@@ -146,6 +147,7 @@ public:
 	}
 
 	double get_alpha(const vec3 &uv) const override {
+
 		// 预处理uv坐标，使其范围在[0,1)
 		vec3 real_uv = uv * scale;
 		real_uv[0] = real_uv[0] - std::floor(real_uv[0]);
@@ -257,7 +259,6 @@ public:
 
 		// 单位化
 		RGB = unit_vector(RGB);
-
 		return RGB;
 	}
 

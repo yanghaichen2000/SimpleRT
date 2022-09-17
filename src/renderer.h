@@ -25,20 +25,20 @@ const double P_RR = 1; // 俄罗斯轮盘赌概率
 // 增加对光源采样功能
 // 使用bvh
 // 支持透明材质
-color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<shared_ptr<light>> light_ptr_list) {
+color ray_color(const ray& r, shared_ptr<hittable>& bvh_root, int depth, vector<shared_ptr<light>> light_ptr_list) {
 	hit_record rec;
 
 	if (depth <= 0)
 		return color(0, 0, 0);
 
-	if (bvh_root->hit(r, 0, infinity, rec)) {
+	if (bvh_root->hit(r, 0.00000001, infinity, rec)) {
 		// 获取透明度
 		double alpha = rec.mat_ptr->get_color_map_ptr()->get_alpha(rec.uv);
 
 		// 随机决定是穿透还是不穿透，概率取决于透明度
 		if (random_double() > alpha) { // 穿透
 			// 直接生成一束光线继续向前传播
-			ray new_ray(rec.p + r.dir * 0.00001, r.dir, r.med);
+			ray new_ray(rec.p, r.dir, r.med);
 			// 传入新函数的depth值不会减少
 			if (random_double() > 0.9)
 				return ray_color(new_ray, bvh_root, depth - 1, light_ptr_list);
@@ -83,7 +83,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 					{
 						radiance_direct += vec3(0, 0, 0); // 有遮挡物则直接光为0
 						include_direct_light = true;
-						
+
 					}
 					else
 					{
@@ -95,7 +95,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 							radiance_direct_delta = radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光（反射）
 						}
 						else {
-							radiance_direct_delta = - radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光（折射）
+							radiance_direct_delta = -radiance_light * brdf_light * dot(normalo, wi_light) * dot(normal_light, -wi_light) / (distance_light_square * pdf_light * pdf_p); // 直接光（折射）
 						}
 						radiance_direct += clamp(radiance_direct_delta, 0, std::numeric_limits<double>::infinity()); // 使radiance非负（解决从光源反向射出的问题）
 
@@ -122,8 +122,8 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 #endif
 				sample_light_flag = false;
 				vec3 brdf = rec.mat_ptr->bsdf(wo, normalo, positiono, wo_front, rec.uv, wi, normali, positioni, wi_front);
-				
-				ray new_ray(positioni + wi * 0.0001, wi); // 新的光线从入射点射出
+
+				ray new_ray(positioni, wi); // 新的光线从入射点射出
 				vec3 radiance_indirect;
 				// 如果光线穿透，那么depth不减少
 				if (wo_front == wi_front) {
@@ -160,7 +160,7 @@ color ray_color(const ray& r, shared_ptr<hittable> &bvh_root, int depth, vector<
 
 mutex framebuffer_mutex;
 void render_bvh(int image_height, int image_width, int samples_per_pixel, int max_depth,
-	shared_ptr<hittable> bvh_root, camera cam, vector<vec3> *framebuffer, vector<shared_ptr<light>> light_ptr_list, int step, int bias)
+	shared_ptr<hittable> bvh_root, camera cam, vector<vec3>* framebuffer, vector<shared_ptr<light>> light_ptr_list, int step, int bias)
 {
 	for (int j = image_height - 1; j >= 0; --j) {
 		std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush; // 进度显示

@@ -14,8 +14,12 @@ public:
 public:
 	ray() {}
 	ray(const point3& origin, const vec3& direction, const medium& med_init = medium(1))
-		: orig(origin), dir(direction), med(med_init)
-	{}
+	{
+		orig = origin;
+		dir = direction;
+		med = med_init;      
+		if (isnan(orig[0])) std::cout << "nan ray orig\n";
+	}
 
 	point3 origin() const { return orig; }
 	vec3 direction() const { return dir; }

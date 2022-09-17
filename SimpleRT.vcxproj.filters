@@ -75,6 +75,9 @@
     <ClInclude Include="src\material_samples.h">
       <Filter>源文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\mixed_material.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">

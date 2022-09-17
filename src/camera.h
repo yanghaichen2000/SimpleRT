@@ -32,7 +32,10 @@ public:
 		vec3 dir = lower_left_corner + u * horizontal + v * vertical - origin;
 		dir = unit_vector(dir); //方向单位化
 		//return ray(origin, dir);
-		return ray(lower_left_corner + u * horizontal + v * vertical, dir); // 屏幕上的点作为光线的起点
+		ray ret = ray(lower_left_corner + u * horizontal + v * vertical, dir); // 屏幕上的点作为光线的起点
+		if (isnan(ret.orig[0])) std::cout << "nan ray orig id = 5";
+		return ret;
+		
 	}
 };
 #endif

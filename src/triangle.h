@@ -20,11 +20,11 @@ public:
 
 public:
 	// 使用三个顶点的位置和法线以及一个material初始化
-	triangle(const vec3 &vertex_1, const vec3 &vertex_2, const vec3 &vertex_3, 
-		const shared_ptr<material> &mat_ptr_all, 
-		const vec3 &uv_1, const vec3 &uv_2, const vec3 &uv_3, 
-		const vec3 &vertex_normal_1, const vec3 &vertex_normal_2, const vec3 &vertex_normal_3) {
-		
+	triangle(const vec3& vertex_1, const vec3& vertex_2, const vec3& vertex_3,
+		const shared_ptr<material>& mat_ptr_all,
+		const vec3& uv_1, const vec3& uv_2, const vec3& uv_3,
+		const vec3& vertex_normal_1, const vec3& vertex_normal_2, const vec3& vertex_normal_3) {
+
 		// 设置基本参数
 		vertex[0] = vertex_1;
 		vertex[1] = vertex_2;
@@ -35,7 +35,7 @@ public:
 		uv[0] = uv_1;
 		uv[1] = uv_2;
 		uv[2] = uv_3;
-		
+
 		// 直接记录传入的顶点法线
 		vertex_normal[0] = vertex_normal_1;
 		vertex_normal[1] = vertex_normal_2;
@@ -50,13 +50,19 @@ public:
 		double dv1 = uv[2][1] - uv[0][1];
 		double dv2 = uv[1][1] - uv[0][1];
 		// 得到切线（未正交化）
-		tangent = (dv1 * AB - dv2 * AC) / (du2 * dv1 - du1 * dv2);
-		tangent = unit_vector(tangent);
+		double tmp = du2 * dv1 - du1 * dv2;
+		if (tmp != 0) {
+			tangent = (dv1 * AB - dv2 * AC) / tmp;
+			tangent = unit_vector(tangent);
+		}
+		else {
+			tangent = unit_vector(AC);
+		}
 	}
 
 	// 使用三个顶点的位置（无法线）以及一个material初始化
-	triangle(const vec3 &vertex_1, const vec3 &vertex_2, const vec3 &vertex_3,
-		const shared_ptr<material> &mat_ptr_all) {
+	triangle(const vec3& vertex_1, const vec3& vertex_2, const vec3& vertex_3,
+		const shared_ptr<material>& mat_ptr_all) {
 
 		// 设置基本参数
 		vertex[0] = vertex_1;
@@ -122,7 +128,16 @@ public:
 			// 从法线贴图获取切线空间坐标
 			vec3 tangent_coord = mat_ptr->get_normal_map_ptr()->get_value(rec.uv);
 			// 计算法线
+			vec3 normal_old = normal;
 			normal = basis_t * tangent_coord[0] + basis_b * tangent_coord[1] + normal * tangent_coord[2];
+			if (isnan(normal[0]) and not isnan(normal_old[0])) {
+				std::cout << "\n-------------error------------\n";
+				std::cout << tangent << std::endl;
+				std::cout << basis_t << std::endl;
+				std::cout << basis_b << std::endl;
+				std::cout << normal_old << std::endl;
+				std::cout << tangent_coord << std::endl;
+			}
 		}
 
 		rec.set_face_normal(r, normal);
