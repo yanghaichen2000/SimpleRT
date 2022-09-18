@@ -130,14 +130,6 @@ public:
 			// º∆À„∑®œﬂ
 			vec3 normal_old = normal;
 			normal = basis_t * tangent_coord[0] + basis_b * tangent_coord[1] + normal * tangent_coord[2];
-			if (isnan(normal[0]) and not isnan(normal_old[0])) {
-				std::cout << "\n-------------error------------\n";
-				std::cout << tangent << std::endl;
-				std::cout << basis_t << std::endl;
-				std::cout << basis_b << std::endl;
-				std::cout << normal_old << std::endl;
-				std::cout << tangent_coord << std::endl;
-			}
 		}
 
 		rec.set_face_normal(r, normal);

@@ -29,7 +29,7 @@ using std::cout;
 // 15. 降噪
 // 16. ggx非金属材质					完成
 // 17. 混合材质
-// 18. 
+// 18. 置换贴图
 
 // 目前发现采样光源时wi_front必定等于wo_front，需要解决
 
@@ -43,7 +43,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 4;
+	const int samples_per_pixel = 32;
 	const int max_depth = 6;
 
 	// 打开图像文件
@@ -55,8 +55,6 @@ int main()
 
 	// 写入图像格式
 	file << "P3\n" << image_width << ' ' << image_height << "\n255\n";
-
-	const int threads = 6;
 
 	// 设置object
 	hittable_list world;
@@ -81,29 +79,47 @@ int main()
 	vec3 vertex_6(2, 2, -8);
 	vec3 vertex_7(2, 2, -4);
 	vec3 vertex_8(-2, 2, -4);
-	vec3 light_vertex_1 = vec3(-1, 1.999, -6.25);
-	vec3 light_vertex_2 = vec3(1, 1.999, -6.25);
-	vec3 light_vertex_3 = vec3(1, 1.999, -5.75);
-	vec3 light_vertex_4 = vec3(-1, 1.999, -5.75);
-	//vec3 light_vertex_1 = vec3(-1, 1.999, -7);
-	//vec3 light_vertex_2 = vec3(1, 1.999, -7);
-	//vec3 light_vertex_3 = vec3(1, 1.999, -5);
-	//vec3 light_vertex_4 = vec3(-1, 1.999, -5);
+	//vec3 light_vertex_1 = vec3(-1, 1.999, -6.25);
+	//vec3 light_vertex_2 = vec3(1, 1.999, -6.25);
+	//vec3 light_vertex_3 = vec3(1, 1.999, -5.75);
+	//vec3 light_vertex_4 = vec3(-1, 1.999, -5.75);
+	vec3 light_vertex_1 = vec3(-0.5, 1.999, -6.5);
+	vec3 light_vertex_2 = vec3(0.5, 1.999, -6.5);
+	vec3 light_vertex_3 = vec3(0.5, 1.999, -5.5);
+	vec3 light_vertex_4 = vec3(-0.5, 1.999, -5.5);
 
 	// 三角形实例
 	auto box_material = white;
-	triangle tri1(vertex_3, vertex_2, vertex_1, box_material);
-	triangle tri2(vertex_1, vertex_4, vertex_3, box_material);
-	triangle tri3(vertex_5, vertex_2, vertex_6, box_material);
-	triangle tri4(vertex_1, vertex_2, vertex_5, box_material);
-	triangle tri5(vertex_1, vertex_8, vertex_4, green); // green
-	triangle tri6(vertex_1, vertex_5, vertex_8, green); // green
-	triangle tri7(vertex_2, vertex_3, vertex_7, red); // red 
-	triangle tri8(vertex_2, vertex_6, vertex_7, red); // red
-	triangle tri9(vertex_5, vertex_6, vertex_8, box_material);
-	triangle tri10(vertex_6, vertex_7, vertex_8, box_material);
-	triangle tri11(vertex_8, vertex_7, vertex_4, box_material);
-	triangle tri12(vertex_7, vertex_3, vertex_4, box_material);
+	shared_ptr<texture> tex_wall_left = make_shared<simple_color_texture>(0, 150, 0);
+	shared_ptr<material> mat_wall_left = make_shared<ggx_nonmetal_material>(0.15, 0.03, tex_wall_left);
+
+	shared_ptr<texture> tex_wall_right = make_shared<simple_color_texture>(150, 0, 0);
+	shared_ptr<material> mat_wall_right = make_shared<ggx_nonmetal_material>(0.15, 0.03, tex_wall_right);
+	
+	shared_ptr<texture> tex_wall = make_shared<color_map>("obj/wall_d.jpg", 1);
+	shared_ptr<texture> tex_wall_n = make_shared<normal_map>("obj/wall_n.jpg", 1);
+	shared_ptr<material> mat_wall = make_shared<ggx_nonmetal_material>(0.05, 0.03, tex_wall, vec3(0, 0, 0), tex_wall_n);
+
+	shared_ptr<texture> tex_floor = make_shared<color_map>("obj/floor_d.jpg", 1);
+	shared_ptr<texture> tex_floor_n = make_shared<normal_map>("obj/floor_n.jpg", 1);
+	shared_ptr<material> mat_floor = make_shared<ggx_nonmetal_material>(0.15, 0.03, tex_floor, vec3(0, 0, 0), tex_floor_n);
+
+	shared_ptr<texture> tex_ceiling = make_shared<simple_color_texture>(250, 250, 250);
+	shared_ptr<texture> tex_ceiling_n = make_shared<normal_map>("obj/ceiling_n.jpg", 1);
+	shared_ptr<material> mat_ceiling = make_shared<phong_material>(2, tex_ceiling, vec3(0, 0, 0), tex_ceiling_n);
+
+	triangle tri1(vertex_3, vertex_2, vertex_1, mat_floor, vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0), vec3(0, 1, 0), vec3(0, 1, 0), vec3(0, 1, 0));
+	triangle tri2(vertex_1, vertex_4, vertex_3, mat_floor, vec3(0, 1, 0), vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 1, 0), vec3(0, 1, 0));
+	triangle tri3(vertex_5, vertex_2, vertex_6, mat_wall, vec3(0, 1, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 0, 1), vec3(0, 0, 1), vec3(0, 0, 1));
+	triangle tri4(vertex_1, vertex_2, vertex_5, mat_wall, vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1), vec3(0, 0, 1), vec3(0, 0, 1));
+	triangle tri5(vertex_1, vertex_8, vertex_4, mat_wall, vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 0, 0), vec3(1, 0, 0)); // green
+	triangle tri6(vertex_1, vertex_5, vertex_8, mat_wall, vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0), vec3(1, 0, 0), vec3(1, 0, 0), vec3(1, 0, 0)); // green
+	triangle tri7(vertex_2, vertex_3, vertex_7, mat_wall, vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(-1, 0, 0), vec3(-1, 0, 0), vec3(-1, 0, 0)); // red 
+	triangle tri8(vertex_2, vertex_6, vertex_7, mat_wall, vec3(0, 0, 0), vec3(0, 1, 0), vec3(1, 1, 0), vec3(-1, 0, 0), vec3(-1, 0, 0), vec3(-1, 0, 0)); // red
+	triangle tri9(vertex_5, vertex_6, vertex_8, white);
+	triangle tri10(vertex_6, vertex_7, vertex_8, white);
+	triangle tri11(vertex_8, vertex_7, vertex_4, white);
+	triangle tri12(vertex_7, vertex_3, vertex_4, white);
 	triangle tri13(light_vertex_1, light_vertex_2, light_vertex_3, light_false);
 	triangle tri14(light_vertex_1, light_vertex_3, light_vertex_4, light_false);
 
@@ -159,6 +175,15 @@ int main()
 	shared_ptr<material> mat_plant_leaves = make_shared<ggx_nonmetal_material>(0.05, 0.05, tex_plant, vec3(0, 0, 0), tex_plant_n);
 	shared_ptr<material> mat_plant_pot_outside = make_shared<ggx_nonmetal_material>(0.1, 0.1, tex_plant, vec3(0, 0, 0), tex_plant_n);
 
+	shared_ptr<texture> tex_wood = make_shared<color_map>("obj/wood_d.jpg");
+	shared_ptr<texture> tex_wood_n = make_shared<normal_map>("obj/wood_n.jpg");
+	shared_ptr<material> mat_wood = make_shared<ggx_nonmetal_material>(0.12, 0.08, tex_wood, vec3(0, 0, 0), tex_wood_n);
+
+	shared_ptr<texture> tex_fabric = make_shared<color_map>("obj/fabric_d.jpg");
+	shared_ptr<texture> tex_fabric_n = make_shared<normal_map>("obj/fabric_n.jpg");
+	shared_ptr<texture> tex_fabric_displacement = make_shared<displacement_map>("obj/fabric_displacement.jpg", 1, 0.016);
+	shared_ptr<material> mat_fabric = make_shared<ggx_nonmetal_material>(0.1, 0.03, tex_fabric, vec3(0, 0, 0), tex_fabric_n, nullptr, nullptr, tex_fabric_displacement);
+
 	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
 	unordered_map<string, shared_ptr<material>> material_dict;
@@ -170,8 +195,11 @@ int main()
 	material_dict[string("mat_plant_pot_outside")] = mat_plant_pot_outside;
 	material_dict[string("mat_plant_pot_inside")] = mat_plant_leaves;
 	material_dict[string("mat_plant_leaves")] = mat_plant_leaves;
+	material_dict[string("mat_chair_high")] = mat_wood;
+	material_dict[string("mat_chair_medium")] = mat_fabric;
+	material_dict[string("mat_chair_low")] = mat_wood;
 
-	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_plant.obj", material_dict, mat_default);
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_chair.obj", material_dict, mat_default);
 	//mesh->set_translate(vec3(-0.3, 0, -1.5));
 	world.add(mesh);
 
@@ -185,7 +213,7 @@ int main()
 	// 设置light
 	vec3 light_center = vec3(0, 1.99, -6);
 	vec3 light_normal = unit_vector(vec3(0, -1, 0));
-	vec3 light_radiance = vec3(15, 15, 15);
+	vec3 light_radiance = vec3(22, 22, 22);
 	circle_light light_1(light_center, light_normal, 0.5, light_radiance);
 	shared_ptr<light> light_ptr_1 = make_shared<circle_light>(light_1); // 圆形光源
 
@@ -210,28 +238,29 @@ int main()
 
 
 	// 开始渲染
-	/*
-	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 0);
-	thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 1);
-	thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 2);
-	thread t4(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 3);
-	thread t5(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 4);
-	thread t6(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 5);
-	thread t7(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 6);
-	thread t8(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 7);
-	
-	t1.join();
-	t2.join();
-	t3.join();
-	t4.join();
-	t5.join();
-	t6.join();
-	t7.join();
-	t8.join();
-	*/
-	
-	thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
-	t1.join();
+	constexpr bool multi_thread = true;
+	if (multi_thread) {
+		thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 0);
+		thread t2(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 1);
+		thread t3(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 2);
+		thread t4(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 3);
+		thread t5(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 4);
+		thread t6(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 5);
+		thread t7(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 6);
+		thread t8(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 8, 7);
+		t1.join();
+		t2.join();
+		t3.join();
+		t4.join();
+		t5.join();
+		t6.join();
+		t7.join();
+		t8.join();
+	}
+	else {
+		thread t1(render_bvh, image_height, image_width, samples_per_pixel, max_depth, bvh_root_ptr, cam, &framebuffer, light_ptr_list, 1, 0);
+		t1.join();
+	}
 	
 
 	// 将颜色从framebuffer写入ppm文件中

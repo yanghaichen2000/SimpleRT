@@ -34,6 +34,9 @@ public:
 	// 获取图像纹理指针
 	virtual shared_ptr<texture> get_color_map_ptr() const = 0;
 
+	// 获取置换贴图指针
+	virtual shared_ptr<texture> get_displacement_map_ptr() const = 0;
+
 	// 获取介质
 	// 可能返回空指针
 	virtual shared_ptr<medium> get_medium_outside_ptr() const = 0;
@@ -53,6 +56,7 @@ public:
 	vec3 radiance; // 自发光强度
 	shared_ptr<texture> color_map_ptr = nullptr;
 	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
 	shared_ptr<medium> medium_outside_ptr = default_medium_ptr;
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
 	double kd = 0.9; // 漫反射系数
@@ -83,23 +87,25 @@ public:
 
 	// 使用color_map来构造材质
 	phong_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
 		normal_map_ptr = normal_map_ptr_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	// 使用高光参数和color_map来构造材质
 	phong_material(double a_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
 		a = a_init;
 		normal_map_ptr = normal_map_ptr_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	// www.cs.princeton.edu/courses/archive/fall08/cos526/assign3/lawrence.pdf
@@ -188,6 +194,10 @@ public:
 		return color_map_ptr;
 	}
 
+	virtual shared_ptr<texture> get_displacement_map_ptr() const override {
+		return displacement_map_ptr;
+	}
+
 	virtual shared_ptr<medium> get_medium_outside_ptr() const override {
 		return medium_outside_ptr;
 	};
@@ -215,6 +225,7 @@ public:
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
 	shared_ptr<texture> color_map_ptr = nullptr; // 菲涅尔项初始值（颜色）
 	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
 
 public:
 	// 用一种颜色构造material
@@ -228,7 +239,7 @@ public:
 
 	// 用color_map构造material，同时也支持法线贴图
 	ggx_metal_material(const double& a_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 
 		a = a_init;
 		radiance = radiance_init;
@@ -236,6 +247,7 @@ public:
 		normal_map_ptr = normal_map_ptr_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	// 必须输入单位向量!!!!!!!!
@@ -313,6 +325,10 @@ public:
 		return color_map_ptr;
 	}
 
+	virtual shared_ptr<texture> get_displacement_map_ptr() const override {
+		return displacement_map_ptr;
+	}
+
 	virtual shared_ptr<medium> get_medium_outside_ptr() const override {
 		return medium_outside_ptr;
 	};
@@ -341,11 +357,12 @@ public:
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
 	shared_ptr<texture> color_map_ptr = nullptr; // 漫反射项颜色
 	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
 
 public:
 	// 用color_map构造material，同时也支持法线贴图
 	ggx_nonmetal_material(const double& a_init, const double& F0_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 
 		a = a_init;
 		F0 = F0_init;
@@ -354,6 +371,7 @@ public:
 		normal_map_ptr = normal_map_ptr_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	// 接下来需要完成brdf和采样函数
@@ -466,6 +484,10 @@ public:
 		return color_map_ptr;
 	}
 
+	virtual shared_ptr<texture> get_displacement_map_ptr() const override {
+		return displacement_map_ptr;
+	}
+
 	virtual shared_ptr<medium> get_medium_outside_ptr() const override {
 		return medium_outside_ptr;
 	};
@@ -498,6 +520,7 @@ public:
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
 	shared_ptr<texture> color_map_ptr = nullptr;
 	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
 
 public:
 	// 使用一个颜色来构造材质
@@ -513,13 +536,14 @@ public:
 
 	// 使用color_map来构造材质
 	sss_material(double F0_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 		color_map_ptr = color_map_ptr_init;
 		radiance = radiance_init;
 		normal_map_ptr = normal_map_ptr_init;
 		F0 = F0_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	virtual tuple<double, vec3, bool> sample_wi(const vec3& wo, const vec3& normali, bool wo_front) const override {
@@ -630,6 +654,10 @@ public:
 		return color_map_ptr;
 	}
 
+	virtual shared_ptr<texture> get_displacement_map_ptr() const override {
+		return displacement_map_ptr;
+	}
+
 	virtual shared_ptr<medium> get_medium_outside_ptr() const override {
 		return medium_outside_ptr;
 	};
@@ -658,17 +686,19 @@ public:
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
 	shared_ptr<texture> color_map_ptr = nullptr;
 	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
 
 public:
 
 	ggx_translucent_material(double a_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 		a = a_init;
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
 		normal_map_ptr = normal_map_ptr_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	virtual tuple<double, vec3, bool> sample_wi(const vec3& wo, const vec3& normali, bool wo_front) const override {
@@ -739,7 +769,6 @@ public:
 	virtual vec3 bsdf(const vec3& wo, const vec3& normalo, const vec3& positiono, bool wo_front, const vec3& uv,
 		const vec3& wi, const vec3& normali, const vec3& positioni, bool wi_front) const override {
 
-
 		if (wi_front == wo_front) { // 如果wi和wo同侧，则根据反射计算
 
 			// 此时菲涅尔项为1
@@ -784,7 +813,7 @@ public:
 			double G = dot_n_v / (dot_n_v * (1 - k) + k) * dot_n_l / (dot_n_l * (1 - k) + k);
 			double bsdf_value = 0.0001 * D * G / (4 * dot_n_v * dot_n_l);
 
-			// 计算能量补偿项（因为入射光和折射光方向取值范围不同）
+			// 计算能量补偿倍率（因为入射光和折射光方向取值范围不同）
 			double arcsin_max = std::min(n_i / n_o, n_o / n_i);
 			if (n_o < n_i) {
 				bsdf_value /= 1 - sqrt(1 - pow(arcsin_max, 2));
@@ -836,16 +865,18 @@ public:
 	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
 	shared_ptr<texture> color_map_ptr = nullptr;
 	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
 
 public:
 
 	translucent_material(shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
-		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr) {
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
 		radiance = radiance_init;
 		color_map_ptr = color_map_ptr_init;
 		normal_map_ptr = normal_map_ptr_init;
 		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
 		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
 	}
 
 	virtual tuple<double, vec3, bool> sample_wi(const vec3& wo, const vec3& normali, bool wo_front) const override {
@@ -963,6 +994,10 @@ public:
 
 	virtual shared_ptr<texture> get_color_map_ptr() const override {
 		return color_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_displacement_map_ptr() const override {
+		return displacement_map_ptr;
 	}
 
 	virtual shared_ptr<medium> get_medium_outside_ptr() const override {

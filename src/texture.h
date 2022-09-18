@@ -275,4 +275,127 @@ public:
 	}
 };
 
+// 置换贴图
+class displacement_map : public texture {
+public:
+	// 存放位移量的矩阵
+	// 从下往上，从左往右
+	double** displacement_mat;
+	// 图像行数和列数
+	int rows, cols;
+	// 放大倍数
+	double scale;
+	// 强度
+	double strength;
+
+public:
+	// scale越大，纹理越密集
+	displacement_map(const char file_name[], double scale_init = 1, double strength_init = 0.02) {
+		scale = scale_init;
+		strength = strength_init;
+
+		// 读取图像
+		cv::Mat image;
+		image = cv::imread(file_name, -1); // 第二个参数为-1，表示读取透明通道
+		  
+		// 获取图像尺寸
+		rows = image.rows;
+		cols = image.cols;
+
+		// 创建存储空间
+		displacement_mat = new double *[rows];
+		for (int i = 0; i < rows; i++) {
+			displacement_mat[i] = new double[cols];
+		}
+
+		// 记录数据
+		// 这里分为两种情况进行处理：
+		// 对于三通道图片，必须用cv::Vec3b解析，否则得到的数据会打乱
+		// 对于四通道图片，必须用cv::Vec4b解析，否则无法获取alpha通道
+		if (image.channels() == 3) {
+			for (int i = 0; i < rows; i++) {
+				for (int j = 0; j < cols; j++) {
+					// opencv中颜色存储顺序为BGR，所以需要反转一下顺序
+					// 这里注意要将RGB值转换到线性空间
+					displacement_mat[i][j] = 0;
+					displacement_mat[i][j] += int(image.at<cv::Vec3b>(rows - i - 1, j)[2]) / 255.0 * 2 - 1;
+					displacement_mat[i][j] += int(image.at<cv::Vec3b>(rows - i - 1, j)[1]) / 255.0 * 2 - 1;
+					displacement_mat[i][j] += int(image.at<cv::Vec3b>(rows - i - 1, j)[0]) / 255.0 * 2 - 1;
+					displacement_mat[i][j] /= 3.0;
+				}
+			}
+		}
+		else if (image.channels() == 4) {
+			for (int i = 0; i < rows; i++) {
+				for (int j = 0; j < cols; j++) {
+					// opencv中颜色存储顺序为BGR，所以需要反转一下顺序
+					// 这里注意要将RGB值转换到线性空间
+					displacement_mat[i][j] = 0;
+					displacement_mat[i][j] += int(image.at<cv::Vec4b>(rows - i - 1, j)[2]) / 255.0 * 2 - 1;
+					displacement_mat[i][j] += int(image.at<cv::Vec4b>(rows - i - 1, j)[1]) / 255.0 * 2 - 1;
+					displacement_mat[i][j] += int(image.at<cv::Vec4b>(rows - i - 1, j)[0]) / 255.0 * 2 - 1;
+					displacement_mat[i][j] /= 3.0;
+				}
+			}
+		}
+		else if (image.channels() == 1) {
+			for (int i = 0; i < rows; i++) {
+				for (int j = 0; j < cols; j++) {
+					// opencv中颜色存储顺序为BGR，所以需要反转一下顺序
+					// 这里注意要将RGB值转换到线性空间
+					displacement_mat[i][j] = int(image.at<cv::uint8_t>(rows - i - 1, j)) / 255.0 * 2 - 1;
+				}
+			}
+		}
+		else { // 通道数不是3也不是4
+			std::cout << "error in texture.h: color_map::color_map(): unsupported image channels = " << image.channels() << "\n";
+			std::cout << "file name : " << file_name << '\n';
+			exit(-1);
+		}
+	}
+
+	virtual vec3 get_value(const vec3& uv) const override
+	{
+
+		// 预处理uv坐标，使其范围在[0,1)
+		vec3 real_uv = uv * scale;
+		real_uv[0] = real_uv[0] - std::floor(real_uv[0]);
+		real_uv[1] = real_uv[1] - std::floor(real_uv[1]);
+
+		// 将uv值映射到像素坐标
+		// 映射后的值范围为[0, cols - 1]与[0, rows - 1]
+		double row = real_uv[1] * (rows - 1);
+		double col = real_uv[0] * (cols - 1);
+
+		// 获得相邻四个像素的坐标
+		int row_0 = static_cast<int>(std::floor(row));
+		int row_1 = row_0 + 1;
+		int col_0 = static_cast<int>(std::floor(col));
+		int col_1 = col_0 + 1;
+
+		// 在列上插值
+		double displacement_left = displacement_mat[row_1][col_0] * (row - row_0) + displacement_mat[row_0][col_0] * (row_1 - row);
+		double displacement_right = displacement_mat[row_1][col_1] * (row - row_0) + displacement_mat[row_0][col_1] * (row_1 - row);
+
+		// 在行上插值
+		double displacement_value = displacement_right * (col - col_0) + displacement_left * (col_1 - col);
+		displacement_value *= strength;
+
+		return vec3(displacement_value, displacement_value, displacement_value);
+	}
+
+	double get_alpha(const vec3& uv) const override {
+
+		return 1;
+	}
+
+	~displacement_map() {
+		// 手动释放空间
+		for (int i = 0; i < rows; i++) {
+			delete[] displacement_mat[i];
+		}
+		delete[] displacement_mat;
+	}
+};
+
 #endif

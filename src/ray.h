@@ -18,7 +18,6 @@ public:
 		orig = origin;
 		dir = direction;
 		med = med_init;      
-		if (isnan(orig[0])) std::cout << "nan ray orig\n";
 	}
 
 	point3 origin() const { return orig; }

@@ -221,6 +221,7 @@ class dict_material_obj_mesh : public mesh_triangle
 public:
 	// {mesh名称 : material_ptr}字典
 	unordered_map<string, shared_ptr<material>> material_dict;
+
 	// 默认material_ptr
 	shared_ptr<material> default_mat_ptr;
 
@@ -330,21 +331,37 @@ public:
 			// 生成三角形，并放入triangle_ptr_list
 			int index_num = mesh.Indices.size();
 			// 每三个index一组对应一个三角形
-			//std::cout << triangle_ptr_list.size() << ' ' << position_list.size() << '\n';
-			for (int index = 0; index < index_num; index += 3) {
-				//std::cout << triangle_ptr_index << ' ' << index << '\n';
-				triangle_ptr_list[triangle_ptr_index] = make_shared<triangle>(
-					position_list[mesh.Indices[index]],
-					position_list[mesh.Indices[index + 1]],
-					position_list[mesh.Indices[index + 2]],
-					current_mat_ptr,
-					uv_list[mesh.Indices[index]],
-					uv_list[mesh.Indices[index + 1]],
-					uv_list[mesh.Indices[index + 2]],
-					normal_list[mesh.Indices[index]],
-					normal_list[mesh.Indices[index + 1]],
-					normal_list[mesh.Indices[index + 2]]);
-				triangle_ptr_index++;
+			if (shared_ptr<texture> displacement_map_ptr = current_mat_ptr->get_displacement_map_ptr()) { // 有置换贴图的情况
+				for (int index = 0; index < index_num; index += 3) {
+					triangle_ptr_list[triangle_ptr_index] = make_shared<triangle>(
+						position_list[mesh.Indices[index]] + normal_list[mesh.Indices[index]] * displacement_map_ptr->get_value(uv_list[mesh.Indices[index]]),
+						position_list[mesh.Indices[index + 1]] + normal_list[mesh.Indices[index + 1]] * displacement_map_ptr->get_value(uv_list[mesh.Indices[index + 1]]),
+						position_list[mesh.Indices[index + 2]] + normal_list[mesh.Indices[index + 2]] * displacement_map_ptr->get_value(uv_list[mesh.Indices[index + 2]]),
+						current_mat_ptr,
+						uv_list[mesh.Indices[index]],
+						uv_list[mesh.Indices[index + 1]],
+						uv_list[mesh.Indices[index + 2]],
+						normal_list[mesh.Indices[index]],
+						normal_list[mesh.Indices[index + 1]],
+						normal_list[mesh.Indices[index + 2]]);
+					triangle_ptr_index++;
+				}
+			}
+			else { // 没有置换贴图的情况
+				for (int index = 0; index < index_num; index += 3) {
+					triangle_ptr_list[triangle_ptr_index] = make_shared<triangle>(
+						position_list[mesh.Indices[index]],
+						position_list[mesh.Indices[index + 1]],
+						position_list[mesh.Indices[index + 2]],
+						current_mat_ptr,
+						uv_list[mesh.Indices[index]],
+						uv_list[mesh.Indices[index + 1]],
+						uv_list[mesh.Indices[index + 2]],
+						normal_list[mesh.Indices[index]],
+						normal_list[mesh.Indices[index + 1]],
+						normal_list[mesh.Indices[index + 2]]);
+					triangle_ptr_index++;
+				}
 			}
 		}
 
