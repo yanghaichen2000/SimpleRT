@@ -330,6 +330,7 @@ public:
 
 			// 生成三角形，并放入triangle_ptr_list
 			int index_num = mesh.Indices.size();
+			std::cout << "num of triangles = " << index_num / 3 << std::endl;
 			// 每三个index一组对应一个三角形
 			if (shared_ptr<texture> displacement_map_ptr = current_mat_ptr->get_displacement_map_ptr()) { // 有置换贴图的情况
 				for (int index = 0; index < index_num; index += 3) {

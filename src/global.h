@@ -54,6 +54,46 @@ inline double clamp(double x, double min, double max) {
 	return x;
 }
 
+// disney brdf functions
+
+double sqr(double x) { return x * x; }
+
+double SchlickFresnel(double u) {
+    double m = clamp(1 - u, 0, 1);
+    double m2 = m * m;
+    return m2 * m2 * m; // pow(m,5)
+}
+
+double GTR1(double NdotH, double a) {
+    if (a >= 1) return 1 / pi;
+    double a2 = a * a;
+    double t = 1 + (a2 - 1) * NdotH * NdotH;
+    return (a2 - 1) / (pi * log(a2) * t);
+}
+
+double GTR2(double NdotH, double a) {
+    double a2 = a * a;
+    double t = 1 + (a2 - 1) * NdotH * NdotH;
+    return a2 / (pi * t * t);
+}
+
+double GTR2_aniso(double NdotH, double HdotX, double HdotY, double ax, double ay) {
+    return 1 / (pi * ax * ay * sqr(sqr(HdotX / ax) + sqr(HdotY / ay) + NdotH * NdotH));
+}
+
+double smithG_GGX(double NdotV, double alphaG) {
+    double a = alphaG * alphaG;
+    double b = NdotV * NdotV;
+    return 1 / (NdotV + sqrt(a + b - a * b));
+}
+
+double smithG_GGX_aniso(double NdotV, double VdotX, double VdotY, double ax, double ay) {
+    return 1.0 / (NdotV + sqrt(sqr(VdotX * ax) + sqr(VdotY * ay) + sqr(NdotV)));
+}
+
+
+
+
 // Common Headers
 
 #include "ray.h"

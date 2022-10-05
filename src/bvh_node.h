@@ -7,8 +7,11 @@
 #include "bounds.h"
 #include "global.h"
 
+
 class bvh_node : public hittable {
 public:
+	// 总节点个数
+	static int node_num;
 	// 子节点指针
 	shared_ptr<hittable> left, right;
 	// 包围盒
@@ -21,10 +24,10 @@ public:
 	// 这里的objects可以直接输入hittable_list的同名成员变量
 	// start和end给出了该bvh_node需要包含的objects索引范围(不包含end)，从根节点到叶子结点这个范围逐渐变小
 	bvh_node(std::vector<shared_ptr<hittable>>& objects, size_t start, size_t end) {
+		node_num++;
+		
 		// 确定需要分割的坐标轴
 		int axis = random_int_012();
-
-		//std::cout << "start = " << start << "  end = " << end << "  axis = " << axis << "\n";
 
 		// 分配对应的图元比较器用于排序
 		comparator_t comparator = box_x_compare;
@@ -52,7 +55,6 @@ public:
 			}
 		}
 		else { // 该node中有多于两个object，则创建两个bvh_node作为子节点
-			// TODO: 若node中三个object，则左子节点为bvh_node，右子节点为object
 
 			// 对范围内的object进行排序
 			std::sort(objects.begin() + start, objects.begin() + end, comparator);
@@ -85,6 +87,7 @@ public:
 	}
 };
 
+int bvh_node::node_num = 0;
 
 // 生成bvh，并返回根节点
 shared_ptr<hittable> generate_bvh(hittable_list &list) {

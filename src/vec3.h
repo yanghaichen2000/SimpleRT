@@ -17,6 +17,7 @@ public:
 
 public:
 	vec3() : e{ 0,0,0 } {}
+	vec3(double e0) : e{ e0, e0, e0 } {}
 	vec3(double e0, double e1, double e2) : e{ e0, e1, e2 } {}
 
 	double x() const { return e[0]; }
@@ -180,6 +181,18 @@ void build_basis(const vec3& n, vec3& b1, vec3& b2) {
 vec3 clamp(const vec3 &vec, double min, double max)
 {
 	return vec3(clamp(vec.x(), min, max), clamp(vec.y(), min, max), clamp(vec.z(), min, max));
+}
+
+vec3 mix(const vec3 &x, const vec3 &y, const vec3 &weight) {
+	return x * (vec3(1, 1, 1) - weight) + y * weight;
+}
+
+vec3 mix(const vec3& x, const vec3& y, double weight) {
+	return x * (1.0 - weight) + y * weight;
+}
+
+double mix(double x, double y, double weight) {
+	return x * (1.0 - weight) + y * weight;
 }
 
 // Type aliases for vec3

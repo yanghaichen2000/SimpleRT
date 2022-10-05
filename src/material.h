@@ -1018,6 +1018,166 @@ public:
 };
 
 
+struct disney_brdf_property {
+	double metallic = 0;
+	double subsurface = 0;
+	double specular = 0.5;
+	double roughness = 0.5;
+	double specularTint = 0;
+	double anisotropic = 0;
+	double sheen = 0;
+	double sheenTint = 0.5;
+	double clearcoat = 0;
+	double clearcoatGloss = 1;
+};
+
+// disney brdf
+class disney_material : public material {
+
+public:
+
+	disney_brdf_property property; // brdf参数
+	vec3 radiance; // 自发光强度
+	shared_ptr<medium> medium_outside_ptr = default_medium_ptr;
+	shared_ptr<medium> medium_inside_ptr = default_medium_ptr;
+	shared_ptr<texture> color_map_ptr = nullptr;
+	shared_ptr<texture> normal_map_ptr = nullptr;
+	shared_ptr<texture> displacement_map_ptr = nullptr;
+
+public:
+
+	disney_material(disney_brdf_property property_init, shared_ptr<texture> color_map_ptr_init, vec3 radiance_init = vec3(0.0, 0.0, 0.0), shared_ptr<texture> normal_map_ptr_init = nullptr,
+		shared_ptr<medium> medium_outside_ptr_init = nullptr, shared_ptr<medium> medium_inside_ptr_init = nullptr, shared_ptr<texture> displacement_map_ptr_init = nullptr) {
+		property = property_init;
+		radiance = radiance_init;
+		color_map_ptr = color_map_ptr_init;
+		normal_map_ptr = normal_map_ptr_init;
+		medium_outside_ptr = medium_outside_ptr_init ? medium_outside_ptr_init : default_medium_ptr;
+		medium_inside_ptr = medium_inside_ptr_init ? medium_inside_ptr_init : default_medium_ptr;
+		displacement_map_ptr = displacement_map_ptr_init;
+	}
+
+	virtual tuple<double, vec3, bool> sample_wi(const vec3& wo, const vec3& normali, bool wo_front) const override {
+
+		vec3 wi;
+		double pdf;
+
+		// cos-weighted采样
+		double rand1 = random_double();
+		double rand2 = random_double();
+
+		double theta = acos(sqrt(1 - rand1));
+		double phi = pi2 * rand2;
+
+		// 利用法线构建坐标系
+		vec3 b1, b2;
+		build_basis(normali, b1, b2);
+
+		// 得到wi
+		wi = normali * cos(theta) + b1 * sin(phi) * sin(theta) + b2 * cos(phi) * sin(theta);
+
+		pdf = cos(theta) * pi_inv;
+
+		return make_tuple(pdf, wi, wo_front);
+	}
+
+	virtual tuple<double, vec3, vec3>
+		sample_positioni(const vec3& normalo, const vec3& positiono, shared_ptr<hittable> world) const override {
+
+		return make_tuple(1, normalo, positiono);
+	}
+
+	virtual vec3 bsdf(const vec3& wo, const vec3& normalo, const vec3& positiono, bool wo_front, const vec3& uv,
+		const vec3& wi, const vec3& normali, const vec3& positioni, bool wi_front) const override {
+		
+		vec3 X = normalo;
+		vec3 Y = normalo;
+
+		double NdotL = dot(normalo, wi);
+		double NdotV = dot(normalo, wo);
+		if (NdotL < 0 || NdotV < 0) return vec3(0, 0, 0);
+
+		vec3 H = unit_vector(wi + wo);
+		double NdotH = dot(normalo, H);
+		double LdotH = dot(wi, H);
+
+		vec3 Cdlin = vec3(1, 1, 1);
+		double Cdlum = .3 * Cdlin[0] + .6 * Cdlin[1] + .1 * Cdlin[2]; // luminance approx.
+
+		vec3 Ctint = Cdlum > 0 ? Cdlin / Cdlum : vec3(1, 1, 1); // normalize lum. to isolate hue+sat
+		vec3 Cspec0 = mix(property.specular * .08 * mix(vec3(1, 1, 1), Ctint, property.specularTint), Cdlin, property.metallic);
+		vec3 Csheen = mix(vec3(1, 1, 1), Ctint, property.sheenTint);
+
+		// Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
+		// and mix in diffuse retro-reflection based on roughness
+		double FL = SchlickFresnel(NdotL), FV = SchlickFresnel(NdotV);
+		double Fd90 = 0.5 + 2 * LdotH * LdotH * property.roughness;
+		double Fd = mix(1.0, Fd90, FL) * mix(1.0, Fd90, FV);
+
+		// Based on Hanrahan-Krueger brdf approximation of isotropic bssrdf
+		// 1.25 scale is used to (roughly) preserve albedo
+		// Fss90 used to "flatten" retroreflection based on roughness
+		double Fss90 = LdotH * LdotH * property.roughness;
+		double Fss = mix(1.0, Fss90, FL) * mix(1.0, Fss90, FV);
+		double ss = 1.25 * (Fss * (1 / (NdotL + NdotV) - .5) + .5);
+
+		// specular
+		double aspect = sqrt(1 - property.anisotropic * .9);
+		double ax = std::max(.001, sqr(property.roughness) / aspect);
+		double ay = std::max(.001, sqr(property.roughness) * aspect);
+		double Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
+		double FH = SchlickFresnel(LdotH);
+		vec3 Fs = mix(Cspec0, vec3(1, 1, 1), FH);
+		double Gs;
+		Gs = smithG_GGX_aniso(NdotL, dot(wi, X), dot(wi, Y), ax, ay);
+		Gs *= smithG_GGX_aniso(NdotV, dot(wo, X), dot(wo, Y), ax, ay);
+
+		// sheen
+		vec3 Fsheen = FH * property.sheen * Csheen;
+
+		// clearcoat (ior = 1.5 -> F0 = 0.04)
+		double Dr = GTR1(NdotH, mix(.1, .001, property.clearcoatGloss));
+		double Fr = mix(.04, 1.0, FH);
+		double Gr = smithG_GGX(NdotL, .25) * smithG_GGX(NdotV, .25);
+
+		return ((1 / pi) * mix(Fd, ss, property.subsurface) * Cdlin + Fsheen)
+			* (1 - property.metallic)
+			+ vec3(Gs * Fs * Ds) + vec3(.25 * property.clearcoat * Gr * Fr * Dr);
+	}
+
+	virtual vec3 get_radiance() const override {
+		return radiance;
+	}
+
+	virtual shared_ptr<texture> get_normal_map_ptr() const override {
+		return normal_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_color_map_ptr() const override {
+		return color_map_ptr;
+	}
+
+	virtual shared_ptr<texture> get_displacement_map_ptr() const override {
+		return displacement_map_ptr;
+	}
+
+	virtual shared_ptr<medium> get_medium_outside_ptr() const override {
+		return medium_outside_ptr;
+	};
+
+	virtual shared_ptr<medium> get_medium_inside_ptr() const override {
+		return medium_inside_ptr;
+	};
+
+	virtual bool sample_light() const override {
+		return true;
+	}
+
+	virtual int get_material_number() const override {
+		return 6;
+	}
+};
+
 template <typename material_name>
 constexpr int get_material_number() {
 	if (std::is_same_v<material_name, phong_material>) return 0;
@@ -1026,6 +1186,7 @@ constexpr int get_material_number() {
 	if (std::is_same_v<material_name, sss_material>) return 3;
 	if (std::is_same_v<material_name, ggx_translucent_material>) return 4;
 	if (std::is_same_v<material_name, translucent_material>) return 5;
+	if (std::is_same_v<material_name, disney_material>) return 6;
 }
 
 

@@ -29,9 +29,9 @@ using std::cout;
 // 15. 降噪
 // 16. ggx非金属材质					完成
 // 17. 混合材质
-// 18. 置换贴图
+// 18. 置换贴图						完成
 
-// 目前发现采样光源时wi_front必定等于wo_front，需要解决
+// 置换贴图法线重新计算
 
 
 #define do_render
@@ -43,7 +43,7 @@ int main()
 	const double aspect_ratio = 1; // 16.0 / 9.0
 	const int image_width = 1024; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 32;
+	const int samples_per_pixel = 4;
 	const int max_depth = 6;
 
 	// 打开图像文件
@@ -183,12 +183,17 @@ int main()
 	shared_ptr<texture> tex_fabric_n = make_shared<normal_map>("obj/fabric_n.jpg");
 	shared_ptr<texture> tex_fabric_displacement = make_shared<displacement_map>("obj/fabric_displacement.jpg", 1, 0.016);
 	shared_ptr<material> mat_fabric = make_shared<ggx_nonmetal_material>(0.1, 0.03, tex_fabric, vec3(0, 0, 0), tex_fabric_n, nullptr, nullptr, tex_fabric_displacement);
+	
+	disney_brdf_property property;
+	property.roughness = 0.5;
+	property.specular = 1;
+	shared_ptr<material> mat_disney_test = make_shared<disney_material>(property, tex_cow);
 
 	shared_ptr<material> mat_default = make_shared<phong_material>(vec3(1, 1, 1));
 
 	unordered_map<string, shared_ptr<material>> material_dict;
 	material_dict[string("mat_cow")] = mat_cow;
-	material_dict[string("mat_cube")] = mat_cube;
+	material_dict[string("mat_cube")] = mat_disney_test;
 	material_dict[string("mat_bunny")] = mat_sphere;
 	material_dict[string("mat_horse")] = mat_sphere;
 	material_dict[string("mat_plant_ground")] = mat_plant_leaves;
@@ -199,7 +204,7 @@ int main()
 	material_dict[string("mat_chair_medium")] = mat_fabric;
 	material_dict[string("mat_chair_low")] = mat_wood;
 
-	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_chair.obj", material_dict, mat_default);
+	shared_ptr<mesh_triangle> mesh = make_shared<dict_material_obj_mesh>("obj/test_plant.obj", material_dict, mat_default);
 	//mesh->set_translate(vec3(-0.3, 0, -1.5));
 	world.add(mesh);
 
@@ -208,6 +213,7 @@ int main()
 	std::cout << "generating bvh...\n";
 	shared_ptr<hittable> bvh_root_ptr = generate_bvh(world);
 	std::cout << "bvh is ready\n";
+	std::cout << bvh_node::node_num << " bvh nodes in total\n";
 
 
 	// 设置light
