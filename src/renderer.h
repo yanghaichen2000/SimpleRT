@@ -8,6 +8,8 @@
 #include "global.h"
 #include "color.h"
 #include "sphere.h"
+#include "cylinder.h"
+#include "cone.h"
 #include "triangle.h"
 #include "hittable_list.h"
 #include "camera.h"

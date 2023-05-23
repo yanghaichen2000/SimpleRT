@@ -143,6 +143,11 @@ inline vec3 unit_vector(vec3 v) {
 	return v / v.length();
 }
 
+// normalize
+inline vec3 normalize(vec3 v) {
+	return v / v.length();
+}
+
 // 单位球内均匀采样
 vec3 random_in_unit_sphere() {
 	while (true) {
@@ -184,15 +189,15 @@ vec3 clamp(const vec3 &vec, double min, double max)
 }
 
 vec3 mix(const vec3 &x, const vec3 &y, const vec3 &weight) {
-	return x * (vec3(1, 1, 1) - weight) + y * weight;
+	return y * (vec3(1, 1, 1) - weight) + x * weight;
 }
 
 vec3 mix(const vec3& x, const vec3& y, double weight) {
-	return x * (1.0 - weight) + y * weight;
+	return y * (1.0 - weight) + x * weight;
 }
 
 double mix(double x, double y, double weight) {
-	return x * (1.0 - weight) + y * weight;
+	return y * (1.0 - weight) + x * weight;
 }
 
 // Type aliases for vec3
