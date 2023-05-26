@@ -21,7 +21,7 @@ public:
 	// 返回值为{pdf，入射点法线，入射点坐标}
 	virtual tuple<double, vec3, vec3> sample_positioni(const vec3& normalo, const vec3& positiono, shared_ptr<hittable> world) const = 0;
 
-	// 计算brdf项
+	// 计算bsdf项
 	virtual vec3 bsdf(const vec3& wo, const vec3& normalo, const vec3& positiono, bool wo_front, const vec3& uv,
 		const vec3& wi, const vec3& normali, const vec3& positioni, bool wi_front) const = 0;
 
@@ -467,7 +467,8 @@ public:
 		component_ggx = clamp(component_ggx, 0, infinity);
 
 		// 漫反射项
-		vec3 component_diffuse = (vec3(1 - F_value, 1 - F_value, 1 - F_value)) * color_map_ptr->get_value(uv) * pi_inv;
+		vec3 component_diffuse = (vec3(1 - F0, 1 - F0, 1 - F0)) * color_map_ptr->get_value(uv) * pi_inv;
+		//vec3 component_diffuse = (vec3(1 - F_value, 1 - F_value, 1 - F_value)) * color_map_ptr->get_value(uv) * pi_inv;
 
 		return component_ggx + component_diffuse;
 	}
@@ -1090,8 +1091,8 @@ public:
 	virtual vec3 bsdf(const vec3& wo, const vec3& normalo, const vec3& positiono, bool wo_front, const vec3& uv,
 		const vec3& wi, const vec3& normali, const vec3& positioni, bool wi_front) const override {
 		
-		vec3 X = normalo;
-		vec3 Y = normalo;
+		vec3 X, Y;
+		build_basis(normalo, X, Y);
 
 		double NdotL = dot(normalo, wi);
 		double NdotV = dot(normalo, wo);
@@ -1101,7 +1102,7 @@ public:
 		double NdotH = dot(normalo, H);
 		double LdotH = dot(wi, H);
 
-		vec3 Cdlin = vec3(1, 1, 1);
+		vec3 Cdlin = color_map_ptr->get_value(uv);
 		double Cdlum = .3 * Cdlin[0] + .6 * Cdlin[1] + .1 * Cdlin[2]; // luminance approx.
 
 		vec3 Ctint = Cdlum > 0 ? Cdlin / Cdlum : vec3(1, 1, 1); // normalize lum. to isolate hue+sat
@@ -1140,9 +1141,11 @@ public:
 		double Fr = mix(.04, 1.0, FH);
 		double Gr = smithG_GGX(NdotL, .25) * smithG_GGX(NdotV, .25);
 
-		return ((1 / pi) * mix(Fd, ss, property.subsurface) * Cdlin + Fsheen)
+		vec3 ret = ((1 / pi) * mix(Fd, ss, property.subsurface) * Cdlin + Fsheen)
 			* (1 - property.metallic)
 			+ vec3(Gs * Fs * Ds) + vec3(.25 * property.clearcoat * Gr * Fr * Dr);
+
+		return ret;
 	}
 
 	virtual vec3 get_radiance() const override {

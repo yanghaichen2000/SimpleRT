@@ -1,9 +1,11 @@
 #include "renderer.h"
 #include <thread>
 #include <algorithm>
+#include <ctime>
 #include "bvh_node.h"
 
-#define PPM_FILE_NAME "out/out.ppm"
+#pragma warning(disable : 4996)
+
 
 using std::vector;
 using std::fstream;
@@ -45,18 +47,8 @@ int main()
 	const double aspect_ratio = 16.0 / 16.0; // 16.0 / 9.0
 	const int image_width = 1280; //800
 	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 2048;
+	const int samples_per_pixel = 2;
 	const int max_depth = 4;
-
-	// 打开图像文件
-	std::fstream file;
-	file.open(PPM_FILE_NAME, std::ios::out);
-
-	// 确认是否打开成功
-	if (file.is_open()) std::cout << "file open: " << PPM_FILE_NAME << std::endl;
-
-	// 写入图像格式
-	file << "P3\n" << image_width << ' ' << image_height << "\n255\n";
 
 	// 设置object
 	hittable_list world;
@@ -312,29 +304,35 @@ int main()
 	}
 	
 
-	// 将颜色从framebuffer写入ppm文件中
-	std::cout << "\nrender finish" << std::endl;
-	for (int i = 0; i < image_height * image_width; i++)
-	{
-		if (i % 10000 == 0) {
-			std::cerr << "\rPixels remaining: " << image_height * image_width - i << ' ' << std::flush;
+	// 输出png
+	
+	// 创建一个OpenCV图像对象
+	cv::Mat image(image_height, image_width, CV_8UC3);
+
+	// 将像素值从framebuffer复制到OpenCV图像对象
+	for (int y = 0; y < image_height; ++y) {
+
+		std::cerr << "\r.png Pixels remaining: " << (image_width - y) * image_height << ' ' << std::flush;
+		for (int x = 0; x < image_width; ++x) {
+			// framebuffer[y][x]是您渲染器计算得到的像素值
+			// 这里假设每个像素值存储为3个通道（BGR格式）
+			cv::Vec3b& pixel = image.at<cv::Vec3b>(y, x);
+			pixel[0] = static_cast<int>(256 * clamp(framebuffer[y * image_width + x].z(), 0.0, 0.999));  // 蓝色通道
+			pixel[1] = static_cast<int>(256 * clamp(framebuffer[y * image_width + x].y(), 0.0, 0.999));  // 绿色通道
+			pixel[2] = static_cast<int>(256 * clamp(framebuffer[y * image_width + x].x(), 0.0, 0.999));  // 红色通道
 		}
-
-		double r = framebuffer[i].x();
-		double g = framebuffer[i].y();
-		double b = framebuffer[i].z();
-
-		file << static_cast<int>(256 * clamp(r, 0.0, 0.999)) << ' '
-		<< static_cast<int>(256 * clamp(g, 0.0, 0.999)) << ' '
-		<< static_cast<int>(256 * clamp(b, 0.0, 0.999)) << '\n';
 	}
 
-	file.close();
+	// 输出
+	std::time_t currentTime = std::time(nullptr);
+	std::tm* localTime = std::localtime(&currentTime);
+	char buffer[80];
+	std::strftime(buffer, sizeof(buffer), "%Y%m%d%H%M%S", localTime);
+	std::string currentTime_str = std::string(buffer);
+	std::string filename = "out/" + currentTime_str + ".png";
+	cv::imwrite(filename, image);
 
 	std::cout << "\nwrite finish" << std::endl;
 	
 #endif
-
-	//char a;
-	//std::cin >> a;
 }
