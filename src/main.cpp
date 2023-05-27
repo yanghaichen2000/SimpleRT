@@ -40,15 +40,20 @@ using std::cout;
 
 #define do_render
 
-int main()
+int main(int argc, char** argv)
 {
 #ifdef do_render
+
 	// 初始化
-	const double aspect_ratio = 16.0 / 16.0; // 16.0 / 9.0
-	const int image_width = 1280; //800
-	const int image_height = static_cast<int>(image_width / aspect_ratio);
-	const int samples_per_pixel = 2;
-	const int max_depth = 4;
+	double aspect_ratio = 16.0 / 16.0; // 16.0 / 9.0
+	int image_width = 1024; //800
+	int image_height = static_cast<int>(image_width / aspect_ratio);
+	int samples_per_pixel = 1;
+	if (argc > 1) samples_per_pixel = atoi(argv[1]);
+	int max_depth = 4;
+
+	cout << "image size = " << image_width << "x" << image_height << "\n";
+	cout << "samples per pixel = " << samples_per_pixel << "\n";
 
 	// 设置object
 	hittable_list world;
@@ -314,8 +319,8 @@ int main()
 
 		std::cerr << "\r.png Pixels remaining: " << (image_width - y) * image_height << ' ' << std::flush;
 		for (int x = 0; x < image_width; ++x) {
-			// framebuffer[y][x]是您渲染器计算得到的像素值
-			// 这里假设每个像素值存储为3个通道（BGR格式）
+
+			// 这里每个像素值存储为3个通道（BGR格式）
 			cv::Vec3b& pixel = image.at<cv::Vec3b>(y, x);
 			pixel[0] = static_cast<int>(256 * clamp(framebuffer[y * image_width + x].z(), 0.0, 0.999));  // 蓝色通道
 			pixel[1] = static_cast<int>(256 * clamp(framebuffer[y * image_width + x].y(), 0.0, 0.999));  // 绿色通道
@@ -332,7 +337,7 @@ int main()
 	std::string filename = "out/" + currentTime_str + ".png";
 	cv::imwrite(filename, image);
 
-	std::cout << "\nwrite finish" << std::endl;
+	std::cout << "\ncompleted" << std::endl;
 	
 #endif
 }
